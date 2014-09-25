@@ -18,10 +18,10 @@ def Factorial( N ):
     
     return N * Factorial( N - 1 ) if N else 1
 
-def Doublefactorial( N ):
+def DoubleFactorial( N ):
     ''' Returns x double factorial.'''
     
-    return N * Doublefactorial( N - 2 ) if N > 1 else 1
+    return N * DoubleFactorial( N - 2 ) if N > 1 else 1
 
 def Asymmetry( x, y ):
     ''' This function returns the asymmetry factor between two values.'''

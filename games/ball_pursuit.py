@@ -37,10 +37,12 @@ is_at_max_speed = True
 nstepsmax = 50
 nsteps = nstepsmax
 t = 0
+t_total = 0
 
 ### Game parameters
 time_step        = 1e-2
-enemy_appearance = 5
+nenemies_max     = 5
+enemy_appearance = 10
 force_intensity  = 3e-2
 ball_radius      = 3.e-1
 enemies_distance = 10.
@@ -50,6 +52,7 @@ player_direction = visual.vector( U(), U(), 0 ).norm()
 player_direction = visual.vector( 0, 1, 0 ).norm()
 player_momentum  = 1.
 enemies_momenta  = 1.001 * player_momentum
+speed            = 2
 
 ### Game window
 scene = visual.display( title = 'Ball pursuit',
@@ -83,10 +86,11 @@ colors  = [ visual.color.orange,
             (1,0.7,0.2) ]
 
 while not GameOver( player, enemies ):
-    visual.rate(200)
+    visual.rate( speed * 100)
+    t_total += time_step
     t += time_step
-    
-    if t // enemy_appearance > len( enemies ):
+    if len(enemies) <= nenemies_max and t // enemy_appearance > len( enemies ) :
+        t = 0
         x,y = GetXY( T(), enemies_distance )
         enemy_position = visual.vector( player.x + x, player.y + y, 0 )
         enemies.append(  visual.sphere( pos = enemy_position,
@@ -125,5 +129,8 @@ while not GameOver( player, enemies ):
 
     scene.center = player.pos
 
+t_total /= speed
 
-game_over = visual.text( text='Game over', pos = player.pos, height = 3., align='center', font = 'Times', color=visual.color.red)
+game_over = visual.text( text='Game over', pos = player.pos + visual.vector(0,0,1), height = 3., align='center', font = 'Times', color=visual.color.red)
+
+time_played = visual.text( text='total time = ' + str(t_total) + ' s', pos = player.pos + visual.vector(0,-2.5,1), height = 1.5, align='center', font = 'Times', color=visual.color.orange)
