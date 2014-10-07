@@ -11,8 +11,6 @@ from math import *
 from Sequences import Reversed, Zeros, Identity
 from ROOT import TRandom3 # use other module for randoms if ROOT is not available
 
-R = TRandom3(0)
-
 def Factorial( N ):
     ''' Returns x factorial.'''
     
@@ -51,7 +49,7 @@ def LogGamma( x ):
 def Gamma( x ):
     ''' Returns the value of evaluating the Gamma function at x.'''
     
-    return exp( logGamma( x ) )
+    return exp( LogGamma( x ) )
 
 def Beta( x, y ):
     ''' Returns the value of evaluating the Beta function at x,y.'''
@@ -144,6 +142,7 @@ def RK4( F, x0, y0, x1, dx = 1e-6 ):
 def Interpolate( xs, ys, opt = 'float' ):
     ''' This function takes two lists and returs the function that passes by all points obtained by linear interpolation.'''
     
+    R = TRandom3(0)
     xs, ys = zip( *sorted( zip( xs, ys ) ) )
     
     def Interpolator( x0 ):
@@ -200,7 +199,7 @@ def Root( F, lower, upper, precision = 1e-6, timeout = 1e9 ):
 
         counter += 1
     
-    print 'Root not found. If you re sure that it must be there, increase the timeout.'
+    print 'Root not found. If youre sure that it must be there, increase the timeout.'
     return None
 
 def Integral( F, lower, upper, p = 1e-3 ):
@@ -270,6 +269,7 @@ def Det3( M ):
     det -= m[0][0] * m[1][2] * m[2][1]
     
     return det
+
 
 def Solve( M, N = None ):
     ''' Solves a system of equations. The input must be in matrix form; it accepts both a matrix of coeficients with the independent terms joined or separated. The return is a vector of values.'''

@@ -13,7 +13,6 @@ from Math import Sign
 from General import rint, fint
 import os
 
-
 def MakeTable( *columns ):
     return r'''
 \begin{table}
@@ -57,13 +56,14 @@ def MakeLaTeX( text, file, append = False ):
     os.system( 'pdflatex ' + file )
     os.system( 'open '     + file )
 
-
-
-
-
-
-
-
+def SetError( x, sx, exponent = 'auto' ):
+    sx =  abs( sx )
+    sexp = fint( log10( sx ) ) - 1
+    xexp = fint( log10(  x ) )
+    sy = rint(sx * 0.1**sexp)
+    y = x * 0.1**(xexp)
+    return str(y).ljust(xexp-sexp + 2,'0') + '(' + str(sy) + ')' + ' \\cdot 10$^{' + str(xexp) + '}$'
+    return r'{0:<2}({1}) \cdot 10$^{{2}}$'.format(y,sy,xexp) if True else '{0:<2}({1}) '.format( y, sy )
 
 
 

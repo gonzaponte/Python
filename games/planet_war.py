@@ -15,7 +15,8 @@ missile_mass     = 1e5
 missile_position = lambda x: (x.pos - player_position).norm() * player_radius
 missile_momentum = 1e3
 win              = False
-level            = sys.argv[1] if len(sys.argv) > 1 else 0
+level            = int(sys.argv[1]) if len(sys.argv) > 1 else 0
+
 
 def Average( values ):
     return sum(values)/len(values)
@@ -77,9 +78,31 @@ def ConfigureLevel():
                                       'color' : visual.color.orange} )
 
     elif level is 1:
-        pass
+        target_position = visual.vector( 1, 4, 0 ).norm() * 1e8
+        target_radius = 1.5 * player_radius
+        target_mass   = player_mass * 1000000
+        planets_properties.append( {    'pos' : visual.vector( 0.3, 1, 0 ).norm() * .5e8,
+                                     'radius' : 6 * player_radius,
+                                       'mass' : M*2,
+                                      'color' : visual.color.orange} )
+        planets_properties.append( {    'pos' : visual.vector( 0.2, 0.8, 0 ).norm() * .8e8,
+                                     'radius' : 6 * player_radius,
+                                       'mass' : M,
+                                      'color' : visual.color.orange} )
+
     elif level is 2:
-        pass
+        target_position = visual.vector( 1, 0, 0 ).norm() * 1e8
+        target_radius = 1 * player_radius
+        target_mass   = player_mass * 1000000
+        planets_properties.append( {    'pos' : visual.vector( 1, 0, 0 ).norm() * .2e8,
+                                     'radius' : 10 * player_radius,
+                                       'mass' : M,
+                                      'color' : visual.color.orange} )
+        planets_properties.append( {    'pos' : visual.vector( 1, 0, 0 ).norm() * 1.5e8,
+                                     'radius' : 6 * player_radius,
+                                       'mass' : M,
+                                      'color' : visual.color.orange} )
+
     elif level is 3:
         pass
     elif level is 4:
@@ -164,8 +187,8 @@ def game():
 
         if win:
             wintext = visual.text( text='You win', pos = scene.center + visual.vector(0,0,1e8), height = 1e7, align='center', font = 'Times', color=visual.color.green)
-            wintext.up = True
-            
+#            wintext.up = True
+
             break
 ### Game window
 scene = visual.display( title = 'Planet war',
