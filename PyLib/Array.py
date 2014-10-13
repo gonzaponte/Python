@@ -13,7 +13,8 @@ class Vector:
             Constructor. Takes as many arguments as desired. Copy constructor is also implemented. The arithmetic operators are defined to be applied element by element. Special operations have special syntax:
             - Dot product is the __pow__ method (** operator).
             - Appending values is performed with the Add method.
-            ...'''
+            ...
+        '''
         
         # If only one value in "values" take it: avoid list( list( stuff ) )
         data = list(values[0]) if len(values) is 1 and isinstance( values[0], (list,tuple,Vector) ) else list(values)
@@ -21,79 +22,194 @@ class Vector:
         self.length = len(self.values)
     
     def __add__( self, other ):
-        ''' Define addition operation.'''
+        '''
+            Addition operation.
+        '''
         if isinstance( other, self.__class__ ):
-            #print 'adding', self.values, other.values
             return self.__class__( *map( operator.add, self.values, other.values) )
-        #print 'adding', self.values, other
         return self.__class__( *[ v + other for v in self.values ])
     
     def __radd__( self, other ):
-        ''' Define right-addition operation.'''
+        '''
+            Right-addition operation. Same as __add__.
+        '''
         return self.__add__(other)
     
     def __sub__( self, other ):
-        ''' Define substraction operation.'''
+        '''
+            Substraction operation.
+        '''
         return self.__add__( -other )
     
     def __rsub__( self, other ):
-        ''' Define right-substraction operation. Same as __sub__.'''
+        '''
+            Right-substraction operation. Same as __sub__.
+        '''
         return other + self.__neg__()
     
     def __neg__( self ):
-        ''' Sign inversion.'''
+        '''
+            Sign inversion.
+        '''
         return self * -1
     
     def __mul__( self, other ):
-        ''' Define multiplication operation.'''
+        '''
+            Multiplication operation.
+        '''
         if isinstance( other, self.__class__ ):
             return self.__class__( *map( operator.mul, self.values, other.values) )
         return self.__class__( *[ v * other for v in self.values ])
     
     def __rmul__( self, number ):
-        ''' Define right-multiplication operation. Same as __mul__.'''
+        '''
+            Right-multiplication operation. Same as __mul__.
+        '''
         return self.__mul__( number )
     
     def __pow__( self, other ):
-        ''' Define dot product operation.'''
+        '''
+            Dot product operation.
+        '''
         if isinstance( other, Matrix ):
             return Vector( *[self.__pow__( col ) for col in other.T()] )
         return sum( self.__mul__( other ).values )
     
     def __div__( self, other ):
-        ''' Define division operation.'''
+        '''
+            Division operation.
+        '''
         if isinstance( other, self.__class__ ):
             return self.__class__( *map( operator.div, self.values, other.values) )
         return self.__class__( *[ v / other for v in self.values ])
     
     def __rdiv__( self, number ):
-        ''' Define division operation. Same as __div__.'''
+        '''
+            Division operation. Same as __div__.
+        '''
         return self.__class__( *[ other / v for v in self.values ] )
     
     def __getitem__(self,index):
-        ''' Return the specified element "index".'''
+        '''
+            Returns the specified element "index".
+        '''
         return self.values[index]
     
     def __setitem__(self,index,value):
-        ''' Assign value to item in "index".'''
+        '''
+            Assign "value" to item in "index".
+        '''
         self.values[index] = value
     
     def __len__(self):
-        ''' Length of the vector.'''
+        '''
+            Length of the vector.
+        '''
         return self.length
     
     def __reversed__( self ):
-        ''' Reversed components.'''
+        '''
+            Reversed components.
+        '''
         return self.__class__( *self.values[::-1])
     
-    def __str__(self):
-        ''' User-friendly string representation of the vector.'''
+    def __str__( self ):
+        '''
+            User-friendly string representation of the vector.
+        '''
         return '< ' + ', '.join( ['{0:<+8.4e}'.format(v) for v in self.values] ) + ' >'
     
-    def __repr__(self):
-        ''' More explicit string representation of the vector.'''
-        return 'Vector ' + self.__str__()
+#    def __format__( self ):
+#        '''
+#            User-friendly string representation of the vector for new style string format.
+#        '''
+#        return self.__str__()
+#
+#    def __repr__( self ):
+#        '''
+#            More explicit string representation of the vector.
+#        '''
+#        return 'Vector ' + self.__str__()
+
+    def __eq__( self, other ):
+        '''
+            Equality comparison of each value.
+        '''
+        return self.values == other.values if isinstance( other, self.__class__ ) else False
     
+    def __gt__( self, other ):
+        '''
+            Greater than operator. Lengths comparison.
+        '''
+        return self.length > other.length if isinstance( other, self.__class__ ) else False
+
+    def __lt__( self, other ):
+        '''
+            Lower than operator. Lengths comparison.
+        '''
+        return self.length < other.length if isinstance( other, self.__class__ ) else False
+
+    def __ge__( self, other ):
+        '''
+            Greater of equal length.
+        '''
+        return self > other or self == other
+
+    def __le__( self, other ):
+        '''
+            Lower or equal length.
+        '''
+        return self < other or self == other
+
+#    def __float__( self ):
+#        '''
+#            Float conversion for each element.
+#        '''
+#        return self.__class__( *map( float, self.values ) )
+#
+#    def __round__( self ):
+#        '''
+#            Round operation to each element.
+#        '''
+#        return self.__class__( *map( round, self.values ) )
+
+    def __floor__( self ):
+        '''
+            Floor-round operation to each element.
+        '''
+        return self.__class__( *map( math.floor, self.values ) )
+
+    def __ceil__( self ):
+        '''
+            Ceil-round operation to each element.
+        '''
+        return self.__class__( *map( math.ceil, self.values ) )
+
+    def __trunc__( self ):
+        '''
+            Truncation operation to each element.
+        '''
+        return self.__class__( *map( math.trunc, self.values ) )
+
+    def __nonzero__( self ):
+        '''
+            Bool conversion.
+        '''
+        return True if self.length else False
+
+    def Apply( self, function ):
+        '''
+            Apply "function" to each element.
+        '''
+        return self.__class__( *map( function, self.values ) )
+
+    def append( self, *elements):
+        '''
+            Elements addition.
+        '''
+        if len(elements) is 1 and isinstance( elements[0], Vector ):
+            map( self.Add, elements )
+
     def Add( self, element ):
         ''' Append the argument to the vector.'''
         self.values.append( element )
@@ -126,6 +242,10 @@ class Vector:
         
         self.values = copy.deepcopy(Zeros(self.length))
 
+    def Copy( self ):
+        return self.__class__( self.values )
+
+
 
 class Matrix( Vector ):
     
@@ -150,6 +270,9 @@ class Matrix( Vector ):
             return self.__class__( *[ [ row ** col for col in other.T().values ] for row in self.values ] )
         elif isinstance( other, Vector ):
             return Vector( [ row ** other for row in self.values ] )
+    
+    def __contains__( self, x ):
+        return any( [ x in row for row in self.values ] )
 
     def __str__( self ):
         ''' User-friendly string representation of the matrix.'''
@@ -159,6 +282,9 @@ class Matrix( Vector ):
         ''' More explicit string representation of the vector.'''
         
         return 'Matrix \n' + self.__str__()
+
+    def IsSquare( self ):
+        return self.rows is self.cols
     
     def T(self):
         ''' Matrix transposition.'''
@@ -167,6 +293,12 @@ class Matrix( Vector ):
     
     def Transpose(self):
         return self.T()
+    
+    def Tr(self):
+        return sum( [ self.values[i][i] for i in range(min(self.rows,self.cols)) ] )
+    
+    def Trace(self):
+        return self.Tr()
     
     def AddRow( self, row ):
         if not isinstance( row, (list,tuple,Vector) ):
@@ -212,7 +344,9 @@ class Matrix( Vector ):
         return self.rows, self.cols
 
     def Diagonalize( self, p=1e-4 ):
-        
+        if not self.IsSquare():
+            raise ValueError('Only square matrices can be diagonalized')
+
         def findmax():
             maximum = 0.
             maxpos  = [ 0, 0 ]
@@ -315,6 +449,79 @@ class Matrix( Vector ):
 
         return M
 
+    def SubMatrix( self, row, col ):
+        '''
+            Return the submatrix correspondent to remove the row-th row and the col-th column.
+        '''
+        
+        sub = Zeros(self.rows-1,self.cols-1)
+        for i in range(self.rows):
+            for j in range(self.cols):
+                if   i < row and j < col:
+                    sub[i][j] = self[i][j]
+                elif i > row and j < col:
+                    sub[i-1][j] = self[i][j]
+                elif i < row and j > col:
+                    sub[i][j-1] = self[i][j]
+                elif i > row and j > col:
+                    sub[i-1][j-1] = self[i][j]
+        
+        return sub
+
+    def Minor( self, row, col ):
+        '''
+            Return the (row,col)-minor.
+        '''
+        return self.SubMatrix( row, col ).Det()
+
+    def Cofactor( self, row, col ):
+        '''
+            Return the (row,col)-cofactor.
+        '''
+        return self.Minor( row, col ) * (-1)**(row+col)
+    
+    def CofactorsMatrix( self ):
+        return Matrix( [ [ self.Cofactor(i,j)  for j in range(self.cols)] for i in range(self.rows) ] )
+
+    def Det( self, row = None, col = None ):
+        '''
+            Return the determinant of the matrix. row and col parameters
+        '''
+        if not self.IsSquare():
+            raise ValueError('The determinant can only be computed for a square matrix')
+        
+        # More efficient methods for ranges < 4.
+        if self.rows is 1:
+            return self[0][0]
+        elif self.rows is 2:
+            return self[0][0] * self[1][1] - self[0][1] * self[1][0]
+        elif self.rows is 3:
+            det  = 0
+            det += self[0][0] * self[1][1] * self[2][2]
+            det += self[0][1] * self[1][2] * self[2][0]
+            det += self[0][2] * self[1][0] * self[2][1]
+            det -= self[0][2] * self[1][1] * self[2][0]
+            det -= self[0][1] * self[1][0] * self[2][2]
+            det -= self[0][0] * self[1][2] * self[2][1]
+            return det
+        else:
+            if row is None:
+                if col is None:
+                    return sum([ self[i][0] * self.Cofactor(i,0) for i in range(self.rows) ])
+                else:
+                    return sum([ self[i][col] * self.Cofactor(i,col) for i in range(self.rows) ])
+            else:
+                return sum([ self[row][i] * self.Cofactor(row,i) for i in range(self.cols) ])
+
+    def Determinant( self, row = None, col = None):
+        return self.Det(row,col)
+
+    def Simetric( self ):
+        return 0.5 * ( self + self.T() )
+
+    def AntiSimetric( self ):
+        return 0.5 * ( self - self.T() )
+
 
 class Vector3(Vector):
 
@@ -358,11 +565,17 @@ class Vector4(Vector):
 
 
 def Zeros( rows, cols = None ):
+    '''
+        Matrix filled with zeros.
+    '''
     if cols:
         return Matrix( [ [0.] * cols ] * rows )
     return Vector( [0.] * rows )
 
 def Ones( rows, cols = None ):
+    '''
+        Matrix filled with ones.
+    '''
     return Zeros( rows, cols ) + 1.
 
 def Identity( rows ):
@@ -371,7 +584,7 @@ def Identity( rows ):
     '''
     return Matrix( [ [ 1. if j==i else 0. for j in range(rows) ] for i in range(rows) ])
 
-# example
+# examples and debug
 if __name__ == '__main__':
     A = Vector( 1., 2., 3. )
     B = Vector( 6., 5., 4. )
