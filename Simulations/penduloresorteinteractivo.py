@@ -16,19 +16,22 @@ dt     = 5e-3
 roz    = 1e-1
 k      = 30.
 theta0 = 90 * pi / 180
-pos0   = ( 0, - L, 0 )
+pos0   = ( 0, - L0, 0 )
 F0     = ( 0,   0, 0 )
 p0     = vector( 0, 0, 0 )
 r0     = 0.25
 mass   = 1.
 chain  = [(0,0,0),pos0]
+Lchain = [ -L0 + 0.002*i*L0 for i in range(1000) ]
+Lchain = [ ( Lchain[i], -( L0**2 - Lchain[i]**2 )**.5, 0 ) for i in range(1000) ]
 
 scene = display( title = 'Pendulo simple', x=0, y=0, width=800, height=800, center = (0,-L/2,0) )
 scene.autoscale = False
 scene.forward   = ( 0, 0, -1 )
 
-chain = curve ( pos = chain, radius = 0.1, color = color.blue )
-ball  = sphere( pos = pos0 , p = p0, radius = r0, color = color.red, mass = mass, make_trail = False )
+chain  = curve ( pos = chain, radius = 0.1, color = color.blue )
+Lchain = curve ( pos = Lchain, radius = 0.01, color = color.green )
+ball   = sphere( pos = pos0 , p = p0, radius = r0, color = color.red, mass = mass, make_trail = False )
 
 arrows = bool( len(argv) - 1 )
 
