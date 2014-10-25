@@ -1,7 +1,7 @@
 '''
     Contains definitions of array-like objects and some related functions.
 '''
-
+from __future__ import division
 import copy
 import operator
 import math
@@ -12,7 +12,7 @@ class Vector:
         '''
             Constructor. Takes as many arguments as desired. Copy constructor is also implemented. The arithmetic operators are defined to be applied element by element. Special operations have special syntax:
             - Dot product is the __pow__ method (** operator).
-            - Appending values is performed with the Add method.
+            - Appending values is performed using the Add method.
             ...
         '''
         
@@ -119,18 +119,6 @@ class Vector:
         '''
         return '< ' + ', '.join( ['{0:<+8.4e}'.format(v) for v in self.values] ) + ' >'
     
-#    def __format__( self ):
-#        '''
-#            User-friendly string representation of the vector for new style string format.
-#        '''
-#        return self.__str__()
-#
-#    def __repr__( self ):
-#        '''
-#            More explicit string representation of the vector.
-#        '''
-#        return 'Vector ' + self.__str__()
-
     def __eq__( self, other ):
         '''
             Equality comparison of each value.
@@ -160,18 +148,6 @@ class Vector:
             Lower or equal length.
         '''
         return self < other or self == other
-
-#    def __float__( self ):
-#        '''
-#            Float conversion for each element.
-#        '''
-#        return self.__class__( *map( float, self.values ) )
-#
-#    def __round__( self ):
-#        '''
-#            Round operation to each element.
-#        '''
-#        return self.__class__( *map( round, self.values ) )
 
     def __floor__( self ):
         '''
@@ -211,12 +187,16 @@ class Vector:
             map( self.Add, elements )
 
     def Add( self, element ):
-        ''' Append the argument to the vector.'''
+        '''
+            Append the argument to the vector.
+        '''
         self.values.append( element )
         self.length += 1
     
     def Maxpos( self, Abs = None ):
-        ''' Return the index and value of the greatest value in the vector. If the argument "Abs" is not None, absolute values are applied.'''
+        '''
+            Return the index and value of the greatest value in the vector. If the argument "Abs" is not None, absolute values are applied.
+        '''
         Abs = (lambda x: x) if Abs is None else abs
         maximum = Abs(self[0])
         maxpos  = 0
@@ -227,7 +207,9 @@ class Vector:
         return maxpos, maximum
     
     def Minpos( self, Abs = None ):
-        ''' Return the index and value of the smallest value in the vector. If the argument "Abs" is not None, absolute values are applied.'''
+        '''
+            Return the index and value of the smallest value in the vector. If the argument "Abs" is not None, absolute values are applied.
+        '''
         Abs = (lambda x: x) if Abs is None else abs
         minimum = Abs(self[0])
         minpos  = 0
@@ -238,7 +220,9 @@ class Vector:
         return minpos, minimum
     
     def Clear( self ):
-        ''' Sets all the values to 0.0 .'''
+        '''
+            Sets all the values to 0.0 .
+        '''
         
         self.values = copy.deepcopy(Zeros(self.length))
 
@@ -250,22 +234,26 @@ class Vector:
 class Matrix( Vector ):
     
     def __init__( self, *values ):
-        ''' Constructor. Takes as many arguments as desired. Copy constructor is also implemented. The arithmetic operators are defined to be applied element by element. Special operations have special syntax:
+        ''' 
+            Constructor. Takes as many arguments as desired. Copy constructor is also implemented. The arithmetic operators are defined to be applied element by element. Special operations have special syntax:
             - Actual matrix product is the __pow__ method (** operator).
             - Appending rows/cols is performed with the AddRow / AddCol method.
             - Transposition is both T and Transpose methods.
             - Inverse matrix is the Inverse method.
             - Matrix dimensions is given with the Size method.
             - Diagonalization is performed with the Diagonalize method.
-            ...'''
+            ...
+        '''
 
         data = list(values[0]) if len(values) is 1 and isinstance( values[0], (list,tuple,Vector,Matrix) ) else list(values)
         self.values = Vector( *map( Vector, data ) )
-        self.rows = len( self.values    ) if self.values else 0
-        self.cols = len( self.values[0] ) if self.values else 0
+        self.rows   = len( self.values    ) if self.values else 0
+        self.cols   = len( self.values[0] ) if self.values else 0
     
     def __pow__( self, other ):
-        ''' Product operation with another matrix or vector.'''
+        '''
+            Product operation with another matrix or vector.
+        '''
         if isinstance( other, self.__class__ ):
             return self.__class__( *[ [ row ** col for col in other.T().values ] for row in self.values ] )
         elif isinstance( other, Vector ):
@@ -278,10 +266,10 @@ class Matrix( Vector ):
         ''' User-friendly string representation of the matrix.'''
         return '\n|' + '|\n|'.join( map( str, self.values ) ) + '|'
     
-    def __repr__( self ):
-        ''' More explicit string representation of the vector.'''
-        
-        return 'Matrix \n' + self.__str__()
+#    def __repr__( self ):
+#        ''' More explicit string representation of the vector.'''
+#        
+#        return 'Matrix \n' + self.__str__()
 
     def IsSquare( self ):
         return self.rows is self.cols
@@ -289,7 +277,7 @@ class Matrix( Vector ):
     def T(self):
         ''' Matrix transposition.'''
         
-        return self.__class__( *[ [ self[j][i] for j in range(self.cols) ] for i in range(self.rows) ] )
+        return self.__class__( *[ [ self[j][i] for j in range(self.rows) ] for i in range(self.cols) ] )
     
     def Transpose(self):
         return self.T()
@@ -628,5 +616,3 @@ if __name__ == '__main__':
     print 'C[1][0]   =  ', C[1][0];    C[1][0] = 0
     print 'C[1][0]=0 => ', C
     print 'C.Size()   =  ', C.Size()
-
-
