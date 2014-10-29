@@ -8,7 +8,7 @@
 #
 
 import os
-from ROOT import gStyle, TCanvas, TGraph, TGraphErrors, TFile, TProfile, TH1F, TTree
+from ROOT import gStyle, TCanvas, TGraph, TGraphErrors, TFile, TProfile, TH1F, TTree, TH1I
 from array import array
 from Sequences import Zeros
 from math import sqrt
@@ -31,11 +31,11 @@ canvasorganization[6] = ( 2, 3 )
 canvasorganization[7] = ( 3, 3 )
 canvasorganization[8] = ( 3, 3 )
 canvasorganization[9] = ( 3, 3 )
+canvasorganization[10] = ( 2, 5 )
 
 def printcolortable():
     ''' Prints the color table that which is used when plots are merged.'''
     
-    from ROOT import TH1I
     COLORS = Colors[:15]
     NofC = len(COLORS)
     
