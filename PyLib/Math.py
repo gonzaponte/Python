@@ -13,7 +13,6 @@ from ROOT import TRandom3 # use other module for randoms if ROOT is not availabl
 
 def Factorial( N ):
     ''' Returns x factorial.'''
-    
     return N * Factorial( N - 1 ) if N else 1
 
 def DoubleFactorial( N ):
@@ -139,25 +138,50 @@ def RK4( F, x0, y0, x1, dx = 1e-6 ):
     
     return y
 
-def Interpolate( xs, ys, opt = 'float' ):
-    ''' This function takes two lists and returs the function that passes by all points obtained by linear interpolation.'''
+#def Interpolate( xs, ys, opt = 'float' ):
+#    ''' This function takes two lists and returs the function that passes by all points obtained by linear interpolation.'''
+#    
+#    xs, ys = zip( *sorted( zip( xs, ys ) ) )
+#    
+#    def Interpolator( x0 ):
+#        for i in xrange( 1, len(xs) ):
+#            if xs[i] >= x0:
+#                x1, y1 = xs[ i - 1 ], ys[ i - 1 ]
+#                x2, y2 = xs[   i   ], ys[   i   ]
+#                break
+#    
+#        m = float( y2 - y1 ) / ( x2 - x1 ) if not x1 == x2 else 0.
+#        n = y1 - m * x1
+#        
+#        return m * x0 + n if opt == 'float' else int( m * x0 + n )
+#    
+#    return Interpolator
+
+def Interpolate( xvals, yvals, OutOfRange = False ):
+    '''
+        Construct this class from a x,y-dataset. This is performed by interpolating linearly the data.
+    '''
     
-    R = TRandom3(0)
-    xs, ys = zip( *sorted( zip( xs, ys ) ) )
-    
-    def Interpolator( x0 ):
-        for i in xrange( 1, len(xs) ):
-            if xs[i] >= x0:
-                x1, y1 = xs[ i - 1 ], ys[ i - 1 ]
-                x2, y2 = xs[   i   ], ys[   i   ]
+    n = len(xvals)
+    def interpolator(x0):
+        found = False
+        for i in range(n-1):
+            if x0 > xvals[i] and x0 < xvals[i+1]:
+                x1, x2 = xvals[i:i+2]
+                y1, y2 = yvals[i:i+2]
+                found = True
                 break
-    
-        m = float( y2 - y1 ) / ( x2 - x1 ) if not x1 == x2 else 0.
-        n = y1 - m * x1
+        if not found:
+            if OutOfRange:
+                return yvals[0] if x0 < xvals[0] else yvals[-1]
+            else:
+                raise ValueError('x0 = {0} out of range'.format(x0) )
         
-        return m * x0 + n if opt == 'float' else int( m * x0 + n )
-    
-    return Interpolator
+        slope = float(y2-y1)/(x2-x1)
+        const = y1 - slope * x1
+        
+        return slope * x0 + const
+
 
 def FindRoots( F, lower, upper, ndivs = 1e5 ):
     ''' Finds the roots of a function.'''
