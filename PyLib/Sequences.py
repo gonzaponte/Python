@@ -173,7 +173,7 @@ def Reversed( L ):
 def Izip( Z ):
     ''' This function inverts the zipping in a list of pairs without destroying the original.'''
     
-    return zip( Reversed( zip( *Z ) ) )
+    return zip( *Reversed( zip( *Z ) ) )
 
 def MaxIndex( x ):
     ''' This function returns the indices of the greatest value in a list.'''
@@ -208,7 +208,7 @@ def Cumulative( L ):
 
     return R[1:]
 
-def Frecs( l ):
+def Frequencies( l ):
     ''' This function takes a list and returns a dictionary with the frecuency of each element.'''
     
     frecs={}
@@ -226,7 +226,7 @@ def Binning( nbins = 100, lower = 0., upper = 1.):
     nbins = int( ceil( nbins ) )
     size = float( upper - lower )/ nbins
     
-    return [ lower + i * size for i in range( int(nbins) ) ]
+    return [ lower + i * size for i in range( nbins ) ]
 
 
 
