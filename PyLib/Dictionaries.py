@@ -10,6 +10,8 @@
 from General import SUM
 from Sequences import Izip
 from DataAnalysis import Mean
+import operator
+SUM = operator.add
 
 def StrDic( dictionary ):
     ''' Prints a dictionary sorted and in a fancy way.'''
