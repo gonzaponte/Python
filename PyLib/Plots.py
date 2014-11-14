@@ -8,60 +8,59 @@
 #
 
 import os
-from ROOT import gStyle, TCanvas, TGraph, TGraphErrors, TFile, TProfile, TH1F, TTree, TH1I
-from array import array
-from Sequences import Zeros
-from math import sqrt
-from numpy import array as narray
-import PIL.Image as pili
-from images2gif import *
+import ROOT
+import array
+import Sequences
+import PIL.Image
+import images2gif
 
 
-Colors = [   4,   2,   1,  53,   8,
-            95,  14,   7, 205,   3,
-           218,   6,  46,  40,   5] * 100
+_colors = [   4,   2,   1,  53,   8,
+             95,  14,   7, 205,   3,
+            218,   6,  46,  40,   5] * 100
 
-canvasorganization = {}
-canvasorganization[1] = ( 1, 2 )
-canvasorganization[2] = ( 1, 2 )
-canvasorganization[3] = ( 2, 2 )
-canvasorganization[4] = ( 2, 2 )
-canvasorganization[5] = ( 2, 3 )
-canvasorganization[6] = ( 2, 3 )
-canvasorganization[7] = ( 3, 3 )
-canvasorganization[8] = ( 3, 3 )
-canvasorganization[9] = ( 3, 3 )
-canvasorganization[10] = ( 2, 5 )
+_canvasorganization     = {}
+_canvasorganization[1]  = ( 1, 2 )
+_canvasorganization[2]  = ( 1, 2 )
+_canvasorganization[3]  = ( 2, 2 )
+_canvasorganization[4]  = ( 2, 2 )
+_canvasorganization[5]  = ( 2, 3 )
+_canvasorganization[6]  = ( 2, 3 )
+_canvasorganization[7]  = ( 3, 3 )
+_canvasorganization[8]  = ( 3, 3 )
+_canvasorganization[9]  = ( 3, 3 )
+_canvasorganization[10] = ( 2, 5 )
 
-def printcolortable():
-    ''' Prints the color table that which is used when plots are merged.'''
+def PrintColorsTable():
+    '''
+        Draw the colors table that is used when some plots are merged.
+    '''
+    Ncol   = 15
     
-    COLORS = Colors[:15]
-    NofC = len(COLORS)
+    c = ROOT.TCanvas()
+    h = [ ROOT.TH1I( 'colortable' + str(i), 'Color table', Ncol, 0, Ncol ) for i in range(Ncol) ]
     
-    c = TCanvas()
-    h = [ TH1I( 'colortable' + str(i), 'Color table', NofC, 0, NofC ) for i in range(NofC) ]
+    ROOT.gStyle.SetOptStat('')
+    map( lambda hi, c: hi.SetFillColor(c), h, _colors[:15] )
+    map( lambda hi:    hi.GetXaxis().SetNdivisions(NofC,False), h )
+    map( lambda hi:    hi.GetYaxis().SetLabelColor(0),          h )
+    map( lambda hi:    hi.GetYaxis().SetTickLength(0),          h )
+    map( lambda hi:    hi.SetMaximum(1),                        h )
     
-    gStyle.SetOptStat('')
-    map( lambda i, c: h[i].SetFillColor(c)                     , range(NofC), COLORS )
-    map( lambda hist: hist.GetXaxis().SetNdivisions(NofC,False), h )
-    map( lambda hist: hist.GetYaxis().SetLabelColor(0), h )
-    map( lambda hist: hist.GetYaxis().SetTickLength(0), h )
-    map( lambda hist: hist.SetMaximum(1), h )
-    
-    for i in range(NofC):
+    for i in range(Ncol):
         h[i].Fill(i)
         h[i].Draw('same')
 
     return c,h
 
 def Graph( x, y, xaxis='', yaxis='',title='', markerstyle = None, markersize = None ):
-    ''' Returns a TGraph made of x,y data with optional titles.'''
+    '''
+        Returns a TGraph made of x,y data with optional titles.
+    '''
 
-    if not len(x) == len(y):
-        raise ValueError('Both data lists must have the same length.')
+    assert len(x) == len(y), ValueError('Both lists must have the same length.')
     
-    graph = TGraph( len(x), array('f',x), array('f',y) )
+    graph = ROOT.TGraph( len(x), array.array('f',x), array.array('f',y) )
 
     if xaxis:
         graph.GetXaxis().SetTitle( xaxis )
@@ -77,15 +76,16 @@ def Graph( x, y, xaxis='', yaxis='',title='', markerstyle = None, markersize = N
     return graph
 
 def ErrorsGraph( x, y, ex, ey, xaxis='', yaxis='',title='' ):
-    ''' Returns a TGraphErrors made of x,y data with optional titles.'''
-    
-    if ex is None:
-        ex = Zeros( len(x) )
+    '''
+        Returns a TGraphErrors made of x,y data with optional titles.
+    '''
 
-    if not len(x) == len(y) == len(ex) == len(ey):
-        raise ValueError('Both data lists must have the same length.')
+    ex = Sequences.Zeros( len(x) ) if ex is None else ex
 
-    graph = TGraphErrors( len(x), array('f',x), array('f',y), array('f',ex), array('f',ey) )
+    assert len(x) == len(y) == len(ex) == len(ey), ValueError('Data lists must have the same length.')
+
+    graph = ROOT.TGraphErrors( len(x), array.array('f', x), array.array('f', y),
+                                       array.array('f',ex), array.array('f',ey) )
     
     if xaxis:
         graph.GetXaxis().SetTitle( xaxis )
@@ -96,32 +96,39 @@ def ErrorsGraph( x, y, ex, ey, xaxis='', yaxis='',title='' ):
     
     return graph
 
-
 def GetMax( histogram ):
-    ''' Returns the value of the bin with the greatest value.'''
+    '''
+        Returns the value of the bin with the greatest value.
+    '''
     
     return histogram.GetBinContent( histogram.GetMaximumBin() )
 
 def Norm2integral( histogram ):
-    ''' Scales the histogram so that the integral is 1.'''
+    '''
+        Scales the histogram so that the integral is 1.
+    '''
     
     histogram.Scale( 1./ histogram.Integral() )
     return histogram
 
 def Norm2maximum( histogram ):
-    ''' Scales the histogram so that the greatest bin is setted to 1.'''
+    ''' 
+        Scales the histogram so that the greatest bin is setted to 1.
+    '''
     
     histogram.Scale( 1./ GetMax( histogram ) )
     return histogram
 
 def Merge1D( histograms, xaxis = '', yaxis = '', title = '' ):
-    ''' Draws in the same canvas all the histograms passed. Returns the canvas.'''
+    '''
+        Draws in the same canvas all the histograms passed. Returns the canvas.
+    '''
     
-    c = TCanvas()
+    c = ROOT.TCanvas()
     
     for i in range( len(histograms) ):
         h = histograms[i]
-        h.SetLineColor( Colors[i] )
+        h.SetLineColor( _colors[i] )
         h.Draw( 'SAME' )
 
     histograms[0].SetMaximum( max( map( GetMax, histograms ) ) )
@@ -136,21 +143,25 @@ def Merge1D( histograms, xaxis = '', yaxis = '', title = '' ):
     return c
 
 def Gethisto( file, hname ):
-    ''' Gets an histogram from a file. It accepts the name of the file or the file itself. Use this last option when getting a lot of histograms from the same file.'''
+    '''
+        Gets an histogram from a file. It accepts the name of the file or the file itself. Use the latter option when getting a lot of histograms from the same file.
+    '''
     
     if isinstance( file, str ):
-        file = TFile( file )
+        file = ROOT.TFile( file )
 
     h = file.Get( hname )
-    if isinstance( h, TProfile ):
+    if isinstance( h, ROOT.TProfile ):
         h.SetErrorOption('')
     
     return h
 
 def Addprofile( h2, hp, color = 2, width = 3 ):
-    ''' Merges the scatter plot with its profile. Returns the canvas.'''
+    '''
+        Merges the scatter plot with its profile. Returns the canvas.
+    '''
     
-    c = TCanvas()
+    c = ROOT.TCanvas()
     h2.Draw()
     hp.Draw('SAME')
     hp.SetLineColor( color )
@@ -160,7 +171,9 @@ def Addprofile( h2, hp, color = 2, width = 3 ):
 
 
 def makepresentation( histograms, directory, texfile = 'Presentation' ):
-    ''' Makes a beamer presentation with the histograms passed. Directory is the folder where the images are stored.'''
+    '''
+        Makes a beamer presentation with the histograms passed. Directory is the folder where the images are stored.
+    '''
     
     header=r'''
         \documentclass{beamer}
@@ -204,17 +217,18 @@ def makepresentation( histograms, directory, texfile = 'Presentation' ):
     return None
 
 def Sumhistos( *hlist ):
-    ''' Sums the histograms.'''
-    
-    if not isinstance( hlist, (list,tuple) ):
-        hlist = [ hlist ]
+    '''
+        Sums the histograms.
+    '''
     
     H = hlist[0]
     for h in hlist[1:]:
         H.Add( h )
 
 def GoodLooking( histogram, color = 1, width = 2, fill = None ):
-    ''' Sets the usual attributer to the histogram for a fancy presentation.'''
+    '''
+        Sets the usual attributer to the histogram for a fancy presentation.
+    '''
     
     histogram.SetLineColor( color )
     histogram.SetLineWidth( width )
@@ -222,33 +236,38 @@ def GoodLooking( histogram, color = 1, width = 2, fill = None ):
         histogram.SetFillColor( fill )
 
 def MakeH1( data, title = 'histo', nbins = 100 ):
-    ''' Returns the distribution of data.'''
+    '''
+        Returns the distribution of data.
+    '''
     
     Data = sorted( data )
-    if isinstance( data[0], (tuple) ):
+    if isinstance( data[0], tuple ):
         nbins = len( Data )
         MIN   = Data[0][0]
         MAX   = Data[-1][0]
         MAX  += ( MAX - MIN ) / ( nbins - 1 )
-        histo = TH1F( title, title, nbins, MIN, MAX )
+        histo = ROOT.TH1F( title, title, nbins, MIN, MAX )
         [ histo.SetBinContent( i + 1, data[i][1] ) for i in range( nbins ) ]
     else:
         MIN  = Data[ 0]
         MAX  = Data[-1]
         MAX += ( MAX - MIN ) / ( nbins - 1 )
-        histo = TH1F( title, title, nbins, MIN, MAX )
+        histo = ROOT.TH1F( title, title, nbins, MIN, MAX )
         map( histo.Fill, data )
     
     return histo
     
 def PutInCanvas( objects, Options = None, nhorizontal = None, nvertical = None ):
+    '''
+        Draw each object in a subcanvas.
+    '''
     if nhorizontal is None and nvertical is None:
-        nhorizontal, nvertical = canvasorganization[ len(objects) ]
+        nhorizontal, nvertical = _canvasorganization[ len(objects) ]
 
     if Options is None:
         Options = [''] * len( objects )
     
-    c = TCanvas()
+    c = ROOT.TCanvas()
     c.Divide( nhorizontal, nvertical )
 
     for i in range(len(objects)):
@@ -258,42 +277,25 @@ def PutInCanvas( objects, Options = None, nhorizontal = None, nvertical = None )
     return c
 
 def Plot4D( x, y, z, t, markerstyle = 20, markersize = 1 ):
-    data = narray( [0.] * 4 )
-    tree = TTree('DummyTree','DummyTree')
+    '''
+        Plot a 3D dataset (x,y,z) with an extra color coordinate (t).
+    '''
+    data = array.array( 'd', [0.] * 4 )
+    tree = ROOT.TTree('DummyTree','DummyTree')
     tree.Branch('xyzt', data, 'x/D:y:z:t')
 
     for datai in zip(x,y,z,t):
         data[0], data[1], data[2], data[3] = datai
-        #print data
         tree.Fill()
     tree.SetMarkerStyle( markerstyle )
     tree.SetMarkerSize( markersize )
-    c = TCanvas()
+    c = ROOT.TCanvas()
     tree.Draw('x:y:z:t','','zcol')
     return c, tree
 
 def MakeGif( names, directory = './', extension = '.png', frametime = 0.15, nloops = True, output = './GIF' ):
-    images = [ pili.open( directory + name + extension ) for name in names ]
-    writeGif( output + '.gif', images, frametime, nloops )
-
-'''
-from math import sqrt,log,exp
-from scipy.interpolate import *
-
-z = range( 11 )
-x = [ -1, 0, 2, 1, -2, 0, 1, 1, 2, 0, 0 ]
-y = x[::-1]
-E = [ 0, 0, 0, 1, 1, 1, 2, 2, 2, 3, 3 ]
-
-xint = interp1d( z, x, 4, bounds_error = False, fill_value = 0. )
-yint = interp1d( z, y, 4, bounds_error = False, fill_value = 0. )
-Eint = Rbf(x,y,z,E)
-
-znew = [ 0.01*i for i in range(1000)]
-xnew = xint(znew)
-ynew = yint(znew)
-Enew = Eint(xnew,ynew,znew)
-
-a = Plot4D( x, y, z, E )
-b = Plot4D( xnew, ynew, znew, Enew )
-'''
+    '''
+        Create a gif file with images in directory directory and names names.
+    '''
+    images = [ PIL.Image.open( directory + name + extension ) for name in names ]
+    images2gif.writeGif( output + '.gif', images, frametime, nloops )

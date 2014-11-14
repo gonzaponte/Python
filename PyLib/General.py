@@ -7,8 +7,8 @@
 # Last update: 17 / 03 / 2014
 #
 
-from time import time
-from math import ceil, floor
+import time
+import math
 
 LETTERS  = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z']
 letters  = ['a','b','c','d','e','f','g','h','i','j','k','l','m','n','o','p','q','r','s','t','u','v','w','x','y','z']
@@ -21,14 +21,9 @@ for i,j in zip(LETTERS,letters):
 
 del i,j
 
-SUM  = lambda x,y: x + y
-SUBS = lambda x,y: x - y
-MULT = lambda x,y: x * y
-DIV  = lambda x,y: x / y
-
-rint = lambda x: int( round( x ) )
-fint = lambda x: int( floor( x ) )
-cint = lambda x: int(  ceil( x ) )
+rint = lambda x: int(      round( x ) )
+fint = lambda x: int( math.floor( x ) )
+cint = lambda x: int( math. ceil( x ) )
 
 def S2HMS( s ):
     h, m = 0, 0
@@ -45,7 +40,7 @@ def S2HMS( s ):
 def ElapsedTime( t0 = 0. ):
     ''' Returns the diffence in time since t0 in a readable way.'''
 
-    dt = S2HMS( time() - t0 )
+    dt = S2HMS( time.time() - t0 )
     return '{0} h {1} min {2} s'.format(*dt)
 
 def Wait( message = 'Waiting...' ):
