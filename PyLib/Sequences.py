@@ -30,6 +30,17 @@ def Identity( N ):
 
     return [ [1. if i==j else 0. for j in xrange(N)] for i in xrange(N) ]
 
+def Unnest( L ):
+    if not isinstance( L, (list,tuple) ):
+        return [L]
+    R = []
+    for element in L:
+        element = Unnest(element)
+        for i in element:
+            R.append( i )
+    
+    return R
+
 def GetColumn( M, col ):
     return [ M[i][col] for i in range(len(M)) ]
 
