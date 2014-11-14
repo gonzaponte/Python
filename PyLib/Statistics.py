@@ -125,15 +125,16 @@ class Distribution:
         Class for distributions.
     '''
     
-    def __init__( self, pdf = None, lower = 0., upper = 1., Npoints = 100000, normalized = True ):
+    def __init__( self, pdf = None, lower = 0., upper = 1., Npoints = 100000, integer = False, normalized = True ):
         '''
             Constructor. Use a pdf in a range lower-upper with Npoints. It the distribution is not normalized set normalized to False.
             To construct this class with a set of data check the FromData method.
         '''
+        self.integer  = integer
         self.lower    = lower
         self.upper    = upper
-        self.Npoints  = General.rint(Npoints)
-        self.delta    = (upper-lower)/self.Npoints
+        self.Npoints  = upper - lower if self.integer else General.rint(Npoints)
+        self.delta    = (upper-lower)//Npoints if self.integer else (upper-lower)/Npoints
         self.pdf      = pdf
         if not normalized:
             self._Normalize()
@@ -159,9 +160,11 @@ class Distribution:
         self.pdf = lambda x: inverseintegral * f(x)
 
     def _GetBins( self, N, lower, upper ):
+        if self.integer:
+            return range(lower,upper,(upper-lower)//N)
         N = General.rint(N)
         delta = 0.5 * float( upper - lower ) / N
-        return Sequences.Binning( upper - lower, lower, upper) if self.delta == 1 else Sequences.Binning( N, lower + delta, upper + delta )
+        return Sequences.Binning( N, lower + delta, upper + delta )
 
     def _ComputeCDF( self ):
         '''
@@ -175,20 +178,29 @@ class Distribution:
         '''
             Compute the cumulative density function of the probability density function from lower with step = delta. Upper is the upper limit from which cdf = 1.
         '''
-        def icumulative( x, p = self.delta ):
-            low = self.lower
-            up  = self.upper
-            dif = p + 1
-        
-            while abs(dif) > p:
-                x0 = ( up + low ) / 2
-                dif = self.cdf( x0 ) - x
-                if dif > 0:
-                    up = x0
-                else:
-                    low = x0
-            return x0
-        
+        if self.integer:
+            def icumulative(x):
+                sum = 0
+                x0 = self.lower - 1
+                while sum<x:
+                    x0  += 1
+                    sum += self.pdf(x0)
+
+                return x0
+        else:
+            def icumulative( x, p = self.delta ):
+                low = self.lower
+                up  = self.upper
+                dif = p + 1
+            
+                while abs(dif) > p:
+                    x0 = ( up + low ) / 2
+                    dif = self.cdf( x0 ) - x
+                    if dif > 0:
+                        up = x0
+                    else:
+                        low = x0
+                return x0
         
         self.icdf = icumulative
 
@@ -199,9 +211,15 @@ class Distribution:
         lower   = self.lower if lower is None else lower
         upper   = self.upper if upper is None else upper
         Npoints = self.Npoints if Npoints is None else Npoints
-        Npoints = upper - lower if self.delta == 1 else Npoints
-        return sum( map( self.pdf, self._GetBins( Npoints, lower, upper ) ) ) * float( upper - lower ) / Npoints
-    
+
+        return sum(range(lower,upper+1)) if self.integer else sum( map( self.pdf, self._GetBins( Npoints, lower, upper ) ) ) * float( upper - lower ) / Npoints
+
+    def IsNormalized( self, tolerance = 1e-3 ):
+        '''
+            Check normalization with a given tolerance.
+        '''
+        return 1 - tolerance < self.Integral() < 1 + tolerance
+
     def PDFHistogram( self ):
         '''
             Make an histogram of the PDF.
@@ -245,7 +263,7 @@ def Poisson( mean, upper = None ):
         upper = 4 * mean
     upper = General.cint( upper )
     norm = math.exp( -mean )
-    return Distribution( lambda k: norm * math.pow(mean,k) / Math.Factorial(k), 0, upper, upper )
+    return Distribution( lambda k: norm * math.pow(mean,k) / Math.Factorial(k), 0, upper, upper, integer = True )
 
 def Binomial( p, N ):
     '''
@@ -253,7 +271,7 @@ def Binomial( p, N ):
     '''
     assert 0 < p < 1,'p must be a probability: 0 < p < 1'
     q = 1. - p
-    return Distribution( lambda k: BinomialCoefficient(N,k) * math.pow( p, k ) * math.pow( q, N - k ), 0, N, N )
+    return Distribution( lambda k: BinomialCoefficient(N,k) * math.pow( p, k ) * math.pow( q, N - k ), 0, N, N, integer = True )
 
 def Gauss( mean = 0., sigma = 1., lower = None, upper = None, Npoints = 1e4 ):
     '''
@@ -342,7 +360,7 @@ if __name__ == '__main__':
     print 'mode: ', g.mode
     print '\n'
     
-    mean = 5.
+    mean = 5
     p = Poisson( mean )
     print 'poissonian distribution with mean {0}'.format(mean)
     print 'integral = ', p.Integral()
