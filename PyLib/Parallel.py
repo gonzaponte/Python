@@ -8,7 +8,6 @@
 #
 
 import pp
-from copy import copy
 
 class Parallel:
     ''' Manager of parallel processing.'''
