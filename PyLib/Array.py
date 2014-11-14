@@ -260,48 +260,68 @@ class Matrix( Vector ):
             return Vector( [ row ** other for row in self.values ] )
     
     def __contains__( self, x ):
+        '''
+            Containment aasertion.
+        '''
         return any( [ x in row for row in self.values ] )
 
     def __str__( self ):
-        ''' User-friendly string representation of the matrix.'''
+        '''
+            User-friendly string representation of the matrix.
+        '''
         return '\n|' + '|\n|'.join( map( str, self.values ) ) + '|'
-    
-#    def __repr__( self ):
-#        ''' More explicit string representation of the vector.'''
-#        
-#        return 'Matrix \n' + self.__str__()
 
     def IsSquare( self ):
+        '''
+            Square matrix assertion.
+        '''
         return self.rows is self.cols
     
     def T(self):
-        ''' Matrix transposition.'''
-        
+        '''
+            Matrix transposition.
+        '''
         return self.__class__( *[ [ self[j][i] for j in range(self.rows) ] for i in range(self.cols) ] )
     
     def Transpose(self):
+        '''
+            Matrix transposition. Same as Matrix.T .
+        '''
         return self.T()
     
     def Tr(self):
+        '''
+            Trace operation.
+        '''
         return sum( [ self.values[i][i] for i in range(min(self.rows,self.cols)) ] )
     
     def Trace(self):
+        '''
+            Trace operation. Same as Matrix.Tr .
+        '''
         return self.Tr()
     
     def AddRow( self, row ):
-        if not isinstance( row, (list,tuple,Vector) ):
-            raise TypeError( 'The added row must be a list/tuple/Vector instance' )
+        '''
+            Add a row to the matrix.
+        '''
+        assert isinstance( row, (list,tuple,Vector) ), TypeError('The added row must be a list/tuple/Vector instance')
         self.values.Add( Vector(row) )
         self.rows += 1
 
     def AddCol( self, element ):
-        if not isinstance( element, (list,tuple,Vector) ):
-            raise TypeError( 'The added column must be a list/tuple/Vector instance' )
+        '''
+            Add a column to the matrix.
+        '''
+        assert isinstance( element, (list,tuple,Vector) ), TypeError( 'The added column must be a list/tuple/Vector instance' )
         for i in range( self.rows ):
             self.values[i].Add( element[i] )
         self.cols += 1
 
     def Maxpos( self, Abs = None ):
+        '''
+            Find the indices and value of the largest element in the matrix. Set optional value Abs to true to disregard signs.
+        '''
         maxrow, maxcol = 0, 0
         maximum = self[0][0]
         for i in range(self.rows):
@@ -313,6 +333,9 @@ class Matrix( Vector ):
         return maxrow, maxcol, maximum
 
     def Minpos( self, Abs = None ):
+        '''
+            Find the indices and value of the smallest element in the matrix. Set optional value Abs to true to disregard signs.
+        '''
         minrow, mincol = 0, 0
         minimum = self[0][0]
         for i in range(self.rows):
@@ -324,14 +347,21 @@ class Matrix( Vector ):
         return minrow, mincol, minimum
 
     def Clear( self ):
-        ''' Sets all the coordinates to 0.'''
+        '''
+            Sets all the coordinates to 0.
+        '''
         map( Vector.Clear, self.values )
     
     def Size( self ):
-        ''' Size of the matrix.'''
+        '''
+            Dimensions of the matrix.
+        '''
         return self.rows, self.cols
 
     def Diagonalize( self, p=1e-4 ):
+        '''
+            Perform the matrix diagonalization. Returns the diagonalized matrix and the eigenvectors as the rows of the second matrix.
+        '''
         if not self.IsSquare():
             raise ValueError('Only square matrices can be diagonalized')
 
@@ -374,14 +404,17 @@ class Matrix( Vector ):
             D = R.T() ** ( D ** R )
             V = V ** R
         
-        return D, V
+        return D, V.T()
 
     def Inverse(self):
+        '''
+            Performs matrix inversion using gauss method.
+        '''
         
         new = Matrix(self)
         sol = Vector( range(self.rows) )
 
-        for i in range( self.cols ):
+        for i in range( self.rows ):
             for j in range( self.cols ):
                 if i==j:
                     new[i].Add(1.0)
@@ -469,14 +502,16 @@ class Matrix( Vector ):
         return self.Minor( row, col ) * (-1)**(row+col)
     
     def CofactorsMatrix( self ):
+        '''
+            Matrix with the cofactors.
+        '''
         return Matrix( [ [ self.Cofactor(i,j)  for j in range(self.cols)] for i in range(self.rows) ] )
 
     def Det( self, row = None, col = None ):
         '''
-            Return the determinant of the matrix. row and col parameters
+            Return the determinant of the matrix.
         '''
-        if not self.IsSquare():
-            raise ValueError('The determinant can only be computed for a square matrix')
+        assert self.IsSquare(), ValueError('The determinant can only be computed for a square matrix')
         
         # More efficient methods for ranges < 4.
         if self.rows is 1:
@@ -502,12 +537,21 @@ class Matrix( Vector ):
                 return sum([ self[row][i] * self.Cofactor(row,i) for i in range(self.cols) ])
 
     def Determinant( self, row = None, col = None):
+        '''
+            Returns the determinant of the matrix. Same as Det.
+        '''
         return self.Det(row,col)
 
     def Simetric( self ):
+        '''
+            Returns the simetric part.
+        '''
         return 0.5 * ( self + self.T() )
 
     def AntiSimetric( self ):
+        '''
+            Returns the antisimetric part.
+        '''
         return 0.5 * ( self - self.T() )
 
 
