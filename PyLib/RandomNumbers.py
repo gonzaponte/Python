@@ -7,32 +7,248 @@
 # Last update: 17 / 03 / 2014
 #
 
-from ROOT import TRandom3
-from General import rint
+import General
+import time
+import Math
+import math
 
-class RandomChoice:
+class RandomNumberGenerator:
+    '''
+        Base class for random number generation. It defines the general algorithms that any generator must have.
+    '''
+    def __init__( self, seed = None ):
+        self.seed = self.DefaultSeed() if seed is None else seed
+        self._poisson_pdf  = lambda k,mean: math.pow( mean, k ) * math.exp( - mean ) / Math.Factorial( k )
+        self._poisson_cdf  = lambda x,mean: Math.IncompleteGamma( int( x + 1 ), mean ) / Math.Factorial( int(x) )
     
-    def __init__( self, *P ):
-        self.R = TRandom3()
-        self.R.SetSeed(0)
-        self.eps = 1e-20
+    def DefaultSeed( self ):
+        '''
+            Establishes a default seed based on current time.
+        '''
+        return int( time.time() )
+    
+    def Get(self):
+        '''
+            Returns a random number uniformily distributed in the interval [0,1). To be implemented in each particular generator.
+        '''
+        return 0.
+
+    def Uniform( self, x0 = 0., x1 = 1.):
+        '''
+            Returns a random number uniformily distributed in the interval [x0,x1).
+        '''
+        return x0 + self.Get() * ( x1 - x0 )
+    
+    def Integer( self, x0 = 0, x1 = 100 ):
+        '''
+            Returns a random integer in the interval [x0,x1) == [x0,x1-1].
+        '''
+        return int( self.Uniform( x0, x1 ) )
+
+    def Choose( self, items ):
+        '''
+            Returns a randomly-chosen element in the list items.
+        '''
+        return items[ self.Integer(0,len(items)) ]
+
+    def Shuffle( self, items ):
+        '''
+            Returns the input list shuffled.
+        '''
+        copy = list(items)
+        return [ copy.pop( self.Integer(0,i) ) for i in reversed(range(1,len(items)+1)) ]
+
+    def List( self, N, kind = 'Uniform', **kwargs ):
+        '''
+            Returns a list of N random numbers generated according to kind. Needed arguments must be given as dictionary input.
+        '''
+        exec( 'generator = self.{0}'.format(kind) )
+        return [ generator( **kwargs ) for i in xrange(N) ]
+
+    def Poisson( self, mean ):
+        '''
+            Return a random number according to a poisson distribution of mean mean.
+        '''
+        rand       = self.Get()
+        i          = 0
+        cumulative = 0.
+        while cumulative < rand:
+            cumulative = self._poisson_cdf(i,mean)
+            i += 1
+
+        return i - 1
+    
+    def Gauss( self, mean = 0., sigma = 1. ):
+        '''
+            Return a random number according to a normal distribution with mean mean and std deviation sigma.
+        '''
+        return mean + math.sqrt( - 2 * math.log( self.Get() ) ) * sigma * math.cos( 2 * math.pi * self.Get() )
+
+    def Binomial( self, N, p ):
+        '''
+            Return a random number according to a binomial distribution of N experiments with probability of success p.
+        '''
+        n = 0
+        for i in xrange(N+1):
+            if self.Get() > p:
+                continue
+            n += 1
         
-        self.n = len( P )
-        self.D = dict( enumerate( P ) )
-    
-        self.low = -0.5 + self.eps
-        self.up  = self.n - 0.5 - self.eps
+        return n
+
+    def Expo( self, rate = 1. ):
+        '''
+            Return a random number according to an exponential distribution with rate rate.
+        '''
+        return - rate * math.log( self.Get() )
+
+    def Triangular( self, x0 = 0., x1 = 1., mid = 0.5 ):
+        '''
+            Return a random number according to a triangular distribution from x0 to x1 with mode at mid.
+        '''
+        rand = self.Get()
+        return x0 + math.sqrt( rand * (x1-x0)*(mid-x0) ) if rand < (mid-x0)/(x1-x0) else x1 - math.sqrt( (1-rand) * (x1-x0) * (x1-mid) )
+
+    def SamplePDF( self, pdf, x0, x1 ):
+        '''
+            Sample the given function in the interval [x0,x1) using Metropolis MC.
+        '''
+        return _Metropolis( pdf, x0, x1, self )
+
+class LCG(RandomNumberGenerator):
+    '''
+        Linear congruent pseudo-random number generator.
+    '''
+    def __init__( self, seed = None, a = 1664525, c = 1013904223, m = 4294967296 ):
+        '''
+            Initialize with some seed and parameters
+            a --> multiplier
+            c --> increment
+            m --> modulus
+            
+            Default values for a, c and m are those suggested by Numerical Recipes and seed is given by system time.
+        '''
+        RandomNumberGenerator.__init__( self, seed )
+        assert 0 < self.seed < m, ValueError('Seed must be smaller than m')
+        self.x    = self.seed
+        self.a    = int(a)
+        self.c    = int(c)
+        self.m    = int(m)
+        self.fm   = float(m)
 
     def Get( self ):
-        return self.D[ rint( self.R.Uniform( self.low, self.up ) ) ]
+        '''
+            Get a pseudo-random number within the interval [0,1).
+        '''
+        self.x = (self.a * self. x + self.c) % self.m
+        return self.x / self.fm
 
-
-class FastRandom:
-    ''' Fast, but bad random generator.'''
+class MCG(LCG):
+    '''
+        Multiplicative congruent pseudo-random number generator.
+    '''
+    def __init__( self, seed = None, a = 48271, m = 2147483647 ):
+        '''
+            Initialize with some seed and parameters
+            a --> multiplier
+            m --> modulus
+            
+            Default values for a and m are those used in C++11's minstd_rand and seed is given by system time.
+        '''
+        LCG.__init__( self, seed, a, 0, m )
     
-    def __init__( self, idum ):
-        ''' Constructor. Initialize with a non-zero integer seed.'''
+    def Get( self ):
+        '''
+            Get a pseudo-random number within the interval [0,1).
+        '''
+        self.x = (self.a * self. x) % self.m
+        return self.x / self.fm
+
+class MidSquare(RandomNumberGenerator):
+    '''
+        Pseudo-random number generator using mid-square method.
+    '''
+    def __init__( self, seed ):
+        '''
+            Initialize with a non-zero and non-one seed.
+        '''
+        RandomNumberGenerator.__init__( self, seed )
+        assert seed and seed-1,ValueError('Seed must be not be zero nor one')
+        self.seed = seed
+        self.x    = seed
+
+    def Get( self ):
+        '''
+            Get a pseudo-random number within the interval [0,1).
+        '''
+        self.x **= 2
+        self.strx = str(self.x)
+        l = len(self.strx)
+        if  l % 2:
+            l += 1
+            self.strx = self.strx.zfill( l )
         
+        self.x = int( self.strx[ l//2-2:l//2+2] )
+        return self.x
+
+class MersenneTwister(RandomNumberGenerator):
+    '''
+        Random number generator based on the Marsenne algorithm.
+    '''
+    def __init__( self, seed = None ):
+        '''
+            Initialize with some seed.
+        '''
+        RandomNumberGenerator.__init__( self, seed )
+        self.index = 0
+        self.MT    = []
+        self._GenerateFirstTable()
+
+    def Get( self ):
+        '''
+            Get a pseudo-random number within the interval [0,1).
+        '''
+        if self.index is 0:
+            self._RegenerateTable()
+
+        y  = self.MT[self.index]
+        y ^=   y >> 11
+        y ^= ( y << 7  ) & 0x9d2c5680
+        y ^= ( y << 15 ) & 0xefc60000
+        y ^=   y >> 18
+        
+        self.index = ( self.index + 1 ) % 624
+        return y / (2.**32-1)
+
+    def _GenerateFirstTable( self ):
+        '''
+            Generate the state vector.
+        '''
+        self.MT.append( self.seed )
+        for i in range(1,624):
+            number = 0x6c078965 * ( self.MT[-1] ^ ( self.MT[-1] >> 30 ) ) + i
+            self.MT.append( number & 0xffffffff )
+
+    def _RegenerateTable( self ):
+        '''
+            Generate a new table.
+        '''
+        for i in range(624):
+            y = ( self.MT[i] & 0x80000000 ) + ( self.MT[ (i+1) % 624 ] & 0x7fffffff )
+            self.MT[i] = self.MT[ (i+397) % 624 ] ^ ( y >> 1 )
+            if y % 2:
+                self.MT[i] ^= 0x9908b0df
+
+class ParkMiller(RandomNumberGenerator):
+    '''
+        A pseudo random number generator based on the algorithm created by Park and Miller. It is fast, but bad random generator.
+    '''
+    
+    def __init__( self, seed = None ):
+        '''
+            Initialize with a non-zero integer seed.
+        '''
+        RandomNumberGenerator.__init__( self, seed )
         self.IA   = 16807
         self.IM   = 2147483647
         self.AM   = 1.0 / self.IM
@@ -40,24 +256,24 @@ class FastRandom:
         self.IR   = 2836
         self.NTAB = 32
         self.NDIV = 1 + ( self.IM - 1 ) / self.NTAB
-        self.EPS  = 1.2e-7
+        self.EPS  = 1.e-15
         self.RNMX = 1.0 - self.EPS
 
         self.iy   = 0L
         self.iv   = map( long, range(self.NTAB) )
         self.temp = 0.
-        self.idum = - int( abs( idum ) )
+        self.idum = - int( abs( self.seed ) )
         
-        if not self.idum:
-            raise TypeError('Error in FastRandom: Seed must be a non-zero integer.')
+        assert self.idum,TypeError('Error in ParkMiller: Seed must be a non-zero integer.')
         
-        self.__ShuffleTable()
+        self._ShuffleTable()
     
-    def Uniform( self ):
-        ''' Returns a uniform-deviated random number between 0 and 1.'''
-        
+    def Get( self ):
+        '''
+            Get a pseudo-random number within the interval [0,1).
+        '''
         if self.idum <= 0 or not self.iy:
-            self.__ShuffleTable()
+            self._ShuffleTable()
         
         k          = self.idum / self.IQ
         self.idum  = self.IA * ( self.idum - k * self.IQ ) - self.IR * k;
@@ -70,8 +286,10 @@ class FastRandom:
     
         return self.temp if not self.temp > self.RNMX else self.RNMX
 
-    def __ShuffleTable( self ):
-        ''' Generates a new table.'''
+    def _ShuffleTable( self ):
+        '''
+            Generate a new table.
+        '''
         
         self.idum  = +1 if self.idum > -1 else -self.idum
         
@@ -87,12 +305,17 @@ class FastRandom:
         self.iy = long(self.iv[0])
 
 
-class GoodRandom:
-    ''' Good random number generator. It is also slower.'''
+class LEcuyer(RandomNumberGenerator):
+    '''
+        A pseudo random number generator based on the algorithm created by L'Ecuyer. It is slower than Park Miller, but more reliable.
+    '''
     
-    def __init__( self, idum ):
-        ''' Constructor. Initialize with a non-zero integer seed.'''
-        
+    def __init__( self, seed = None ):
+        '''
+            Initialize with a non-zero integer seed.
+        '''
+
+        RandomNumberGenerator.__init__( self, seed )
         self.IM1   = 2147483563
         self.IM2   = 2147483399
         self.AM    = 1.0 / self.IM1
@@ -105,28 +328,27 @@ class GoodRandom:
         self.IR2   = 3791
         self.NTAB  = 32
         self.NDIV  = 1 + self.IMM1 / self.NTAB
-        self.EPS   = 1.2e-7
+        self.EPS   = 1.e-15
         self.RNMX  = 1.0 - self.EPS
         
-        self.idum  = - int( abs( idum ) )
+        self.idum  = - int( abs( self.seed ) )
         self.idum2 = 123456789L
         self.iy    = 0L
         self.iv    = map( long, range(self.NTAB) )
         self.temp  = 0.
             
         
-        if not self.idum:
-            raise TypeError('Error in GoodRandom: Seed must be a non-zero integer.')
+        assert self.idum, TypeError('Error in LEcuyer: Seed must be a non-zero integer.')
         
-        self.__ShuffleTable()
+        self._ShuffleTable()
 
-
-
-    def Uniform( self ):
-        ''' Returns a uniform-deviated random number between 0 and 1.'''
+    def Get( self ):
+        '''
+            Get a pseudo-random number within the interval [0,1).
+        '''
         
         if self.idum <= 0:
-            self.__ShuffleTable()
+            self._ShuffleTable()
         
         k           = self.idum / self.IQ1
         self.idum   = self.IA1 * ( self.idum - k * self.IQ1 ) - k * self.IR1
@@ -145,8 +367,10 @@ class GoodRandom:
         return self.temp if not self.temp > self.RNMX else self.RNMX
 
 
-    def __ShuffleTable( self ):
-        ''' Generates a new table.'''
+    def _ShuffleTable( self ):
+        '''
+            Generate a new table.
+        '''
         
         self.idum  = 1 if self.idum > -1 else -self.idum
         self.idum2 = int( self.idum )
@@ -162,137 +386,67 @@ class GoodRandom:
 
         self.iy = long(self.iv[0])
 
-#class PerfectRandom:
-#    ''' *** WORKING ON IT. DO NOT USE YET*** Very fast and long-period random number generator.'''
-#
-#    def __init__( self, seed ):
-#        ''' Class constructor.'''
-#        raise RunTimeError('*** WORKING ON PerfectRandom. DO NOT USE YET.***')
-#        self.NN = 312
-#        self.MM = 156
-#        self.MATRIX_A = 0xB5026F5AA96619E9ULL
-#        self.UM =  0xFFFFFFFF80000000ULL
-#        self.LM = 0x7FFFFFFFULL
-#
-#        self.mt = map( long, range( self.NN ) )
-#        self.mti = self.NN + 1
-#
-#        self.mt[0] = int(seed)
-#        for i in xrange( 1, self.NN ):
-#            mt[i] = (6364136223846793005ULL * (mt[mti-1] ^ (mt[mti-1] >> 62)) + mti);
-#
-#/* initializes mt[NN] with a seed */
-#void init_genrand64(unsigned long long seed)
-#{
-#    mt[0] = seed;
-#    for (mti=1; mti<NN; mti++)
-#        mt[mti] =  (6364136223846793005ULL * (mt[mti-1] ^ (mt[mti-1] >> 62)) + mti);
-#}
-#
-#/* initialize by an array with array-length */
-#/* init_key is the array for initializing keys */
-#/* key_length is its length */
-#void init_by_array64(unsigned long long init_key[],
-#                     unsigned long long key_length)
-#{
-#    unsigned long long i, j, k;
-#    init_genrand64(19650218ULL);
-#    i=1; j=0;
-#    k = (NN>key_length ? NN : key_length);
-#    for (; k; k--) {
-#        mt[i] = (mt[i] ^ ((mt[i-1] ^ (mt[i-1] >> 62)) * 3935559000370003845ULL))
-#            + init_key[j] + j; /* non linear */
-#        i++; j++;
-#        if (i>=NN) { mt[0] = mt[NN-1]; i=1; }
-#        if (j>=key_length) j=0;
-#    }
-#    for (k=NN-1; k; k--) {
-#        mt[i] = (mt[i] ^ ((mt[i-1] ^ (mt[i-1] >> 62)) * 2862933555777941757ULL))
-#            - i; /* non linear */
-#        i++;
-#        if (i>=NN) { mt[0] = mt[NN-1]; i=1; }
-#    }
-#    
-#    mt[0] = 1ULL << 63; /* MSB is 1; assuring non-zero initial array */
-#}
-#
-#/* generates a random number on [0, 2^64-1]-interval */
-#unsigned long long genrand64_int64(void)
-#{
-#    int i;
-#    unsigned long long x;
-#    static unsigned long long mag01[2]={0ULL, MATRIX_A};
-#    
-#    if (mti >= NN) { /* generate NN words at one time */
-#        
-#        /* if init_genrand64() has not been called, */
-#        /* a default initial seed is used     */
-#        if (mti == NN+1)
-#            init_genrand64(5489ULL);
-#        
-#        for (i=0;i<NN-MM;i++) {
-#            x = (mt[i]&UM)|(mt[i+1]&LM);
-#            mt[i] = mt[i+MM] ^ (x>>1) ^ mag01[(int)(x&1ULL)];
-#        }
-#        for (;i<NN-1;i++) {
-#            x = (mt[i]&UM)|(mt[i+1]&LM);
-#            mt[i] = mt[i+(MM-NN)] ^ (x>>1) ^ mag01[(int)(x&1ULL)];
-#        }
-#        x = (mt[NN-1]&UM)|(mt[0]&LM);
-#        mt[NN-1] = mt[MM-1] ^ (x>>1) ^ mag01[(int)(x&1ULL)];
-#        
-#        mti = 0;
-#    }
-#    
-#    x = mt[mti++];
-#    
-#    x ^= (x >> 29) & 0x5555555555555555ULL;
-#    x ^= (x << 17) & 0x71D67FFFEDA60000ULL;
-#    x ^= (x << 37) & 0xFFF7EEE000000000ULL;
-#    x ^= (x >> 43);
-#    
-#    return x;
-#}
-#
-#/* generates a random number on [0, 2^63-1]-interval */
-#long long genrand64_int63(void)
-#{
-#    return (long long)(genrand64_int64() >> 1);
-#}
-#
-#/* generates a random number on [0,1]-real-interval */
-#double genrand64_real1(void)
-#{
-#    return (genrand64_int64() >> 11) * (1.0/9007199254740991.0);
-#}
-#
-#/* generates a random number on [0,1)-real-interval */
-#                                 double genrand64_real2(void)
-#                                 {
-#                                 return (genrand64_int64() >> 11) * (1.0/9007199254740992.0);
-#                                 }
-#                                 
-#                                 /* generates a random number on (0,1)-real-interval */
-#                                 double genrand64_real3(void)
-#                                 {
-#                                 return ((genrand64_int64() >> 12) + 0.5) * (1.0/4503599627370496.0);
-#                                 }
-#                                 
-#                                 
-#                                 int main(void)
-#                                 {
-#                                 int i;
-#                                 unsigned long long init[4]={0x12345ULL, 0x23456ULL, 0x34567ULL, 0x45678ULL}, length=4;
-#                                 init_by_array64(init, length);
-#                                 printf("1000 outputs of genrand64_int64()\n");
-#                                 for (i=0; i<1000; i++) {
-#                                 printf("%20llu ", genrand64_int64());
-#                                 if (i%5==4) printf("\n");
-#                                 }
-#                                 printf("\n1000 outputs of genrand64_real2()\n");
-#                                 for (i=0; i<1000; i++) {
-#                                 printf("%10.8f ", genrand64_real2());
-#                                 if (i%5==4) printf("\n");
-#                                 }
-#                                 return 0;
-#                                 }
+class _Metropolis:
+    '''
+        Class for general function sampling.
+        '''
+    def __init__( self, pdf, x0 = 0., x1 = 1., Random = MersenneTwister() ):
+        '''
+            Initialize with some function pdf and an interval [x0,x1).
+            '''
+        self.pdf = pdf
+        self.low  = x0
+        self.upp  = x1
+        self.x0   = 0.5 * ( x1 - x0 )
+        self.rng = Random
+    
+    def __call__( self ):
+        '''
+            Get a sample.
+        '''
+        fx0 = self.pdf( self.x0 )
+        x1  = self.rng.Uniform( self.low, self.upp ) # next trial point
+        fx1 = self.pdf( x1 )
+        ratio = fx1 / fx0
+        
+        if ratio >= 1 or self.rng.Get() <= ratio: ### Faster if the first part of the conditional is true since
+            self.x0 = x1                          ### it is not neccesary to compute another random number.
+        
+        return self.x0
+
+if __name__ == '__main__':
+    from ROOT import TH1F
+    from Plots import PutInCanvas
+    from Statistics import Distribution
+    lcg = LCG()
+    mcg = MCG()
+    mtg = MersenneTwister()
+    pmg = ParkMiller()
+    leg = LEcuyer()
+    
+    fun = Distribution( lambda x: 0.8 * math.exp(-4.*x) + math.exp( -0.5*( (x-.5)/0.012 )**2 ) + 0.3 * math.exp( -0.5*( (x-.55)/0.01 )**2 ), 0, 1, 1e4, normalized = False )
+    pdfsample = lcg.SamplePDF( fun, 0, 1 )
+    
+    hlcg  = TH1F( 'lcg', 'lcg',  15,  0, 15 )
+    hmcg  = TH1F( 'mcg', 'mcg',  16,  0, 16 )
+    hmtg  = TH1F( 'mtg', 'mtg', 100,  0,  1 )
+    hpmg  = TH1F( 'pmg', 'pmg', 100, -5,  5 )
+    hleg  = TH1F( 'leg', 'leg', 100,  0,  1 )
+    hmet  = TH1F( 'met', 'met', 200,  0,  1 )
+    
+    hlcg.SetMinimum(0); hlcg.SetLineColor(1); hlcg.SetLineWidth(2)
+    hmcg.SetMinimum(0); hmcg.SetLineColor(2); hmcg.SetLineWidth(2)
+    hmtg.SetMinimum(0); hmtg.SetLineColor(3); hmtg.SetLineWidth(2)
+    hpmg.SetMinimum(0); hpmg.SetLineColor(1); hpmg.SetLineWidth(2)
+    hleg.SetMinimum(0); hleg.SetLineColor(2); hleg.SetLineWidth(2)
+    hmet.SetMinimum(0); hmet.SetLineColor(2); hmet.SetLineWidth(2)
+    
+    for i in range(int(1e5)):
+        hlcg.Fill( lcg.Poisson(6) )
+        hmcg.Fill( mcg.Binomial(10,0.8) )
+        hmtg.Fill( mtg.Triangular(0.,1.,0.2) )
+        hpmg.Fill( pmg.Gauss(0.,1.) )
+        hleg.Fill( leg.Expo(.2) )
+        hmet.Fill( pdfsample() )
+
+    canv = PutInCanvas( [hlcg,hmcg,hmtg,hpmg,hleg,hmet] )
