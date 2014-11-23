@@ -16,11 +16,11 @@ import images2gif
 
 
 _colors = [   4,   2,   1,  53,   8,
-             95,  14,   7, 205,   3,
+              7,  14,  95, 205,   3,
             218,   6,  46,  40,   5] * 100
 
 _canvasorganization     = {}
-_canvasorganization[1]  = ( 1, 2 )
+_canvasorganization[1]  = ( 1, 0 )
 _canvasorganization[2]  = ( 1, 2 )
 _canvasorganization[3]  = ( 2, 2 )
 _canvasorganization[4]  = ( 2, 2 )
@@ -275,6 +275,21 @@ def PutInCanvas( objects, Options = None, nhorizontal = None, nvertical = None )
         objects[i].Draw( Options[i] )
 
     return c
+
+def FromH3( histo ):
+    '''
+        Get the data from a 3D histogram as a set x,y,z,entries.
+    '''
+    data = []
+    for i in range(1,histo.GetNbinsX()+1):
+        for j in range(1,histo.GetNbinsY()+1):
+            for k in range(1,histo.GetNbinsZ()+1):
+                x = histo.GetXaxis().GetBinCenter(i)
+                y = histo.GetYaxis().GetBinCenter(j)
+                z = histo.GetZaxis().GetBinCenter(k)
+                N = histo.GetBinContent(i,j,k)
+                data.append( (x, y, z, N) )
+    return data
 
 def Plot4D( x, y, z, t, markerstyle = 20, markersize = 1 ):
     '''
