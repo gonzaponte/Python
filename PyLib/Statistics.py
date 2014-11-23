@@ -112,14 +112,6 @@ def Chi2( exp, sexp, th ):
     '''
     return sum( map( lambda x,y,z: ( ( x - y ) / z )**2, exp, th, sexp ) )
 
-def BinomialCoefficient( N, k ):
-    '''
-        Binomial coefficient.
-        '''
-    if k > N:
-        raise ValueError('k must not be greater than N')
-    return 0 if not N else 1 if not k or N == k else BinomialCoefficient( N - 1, k - 1 ) + BinomialCoefficient( N - 1, k )
-
 class Distribution:
     '''
         Class for distributions.
@@ -271,7 +263,7 @@ def Binomial( p, N ):
     '''
     assert 0 < p < 1,'p must be a probability: 0 < p < 1'
     q = 1. - p
-    return Distribution( lambda k: BinomialCoefficient(N,k) * math.pow( p, k ) * math.pow( q, N - k ), 0, N, N, integer = True )
+    return Distribution( lambda k: Math.BinomialCoefficient(N,k) * math.pow( p, k ) * math.pow( q, N - k ), 0, N, N, integer = True )
 
 def Gauss( mean = 0., sigma = 1., lower = None, upper = None, Npoints = 1e4 ):
     '''
