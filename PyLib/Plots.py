@@ -75,6 +75,30 @@ def Graph( x, y, xaxis='', yaxis='',title='', markerstyle = None, markersize = N
 
     return graph
 
+def Graph2( x, y, z, xaxis='', yaxis='', zaxis = '', title='', markerstyle = None, markersize = None ):
+    '''
+        Returns a TGraph2D made of x,y,z data with optional titles.
+    '''
+    
+    assert len(x) == len(y) == len(z), ValueError('Both lists must have the same length.')
+    
+    graph = ROOT.TGraph2D( len(x), array.array('f',x), array.array('f',y), array.array('f',z) )
+    
+    if xaxis:
+        graph.GetXaxis().SetTitle( xaxis )
+    if yaxis:
+        graph.GetYaxis().SetTitle( yaxis )
+    if zaxis:
+        graph.GetZaxis().SetTitle( zaxis )
+    if title:
+        graph.SetTitle( title )
+    if markerstyle:
+        graph.SetMarkerStyle( markerstyle )
+    if markersize:
+        graph.SetMarkerSize( markersize )
+    
+    return graph
+
 def ErrorsGraph( x, y, ex, ey, xaxis='', yaxis='',title='' ):
     '''
         Returns a TGraphErrors made of x,y data with optional titles.
