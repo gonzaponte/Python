@@ -11,6 +11,7 @@ import General
 import time
 import Math
 import math
+import Array
 
 class RandomNumberGenerator:
     '''
@@ -60,7 +61,7 @@ class RandomNumberGenerator:
 
     def List( self, N, kind = 'Uniform', **kwargs ):
         '''
-            Returns a list of N random numbers generated according to kind. Needed arguments must be given as dictionary input.
+            Returns a list of N random numbers generated according to kind. Needed arguments must be given as keyword arguments.
         '''
         exec( 'generator = self.{0}'.format(kind) )
         return [ generator( **kwargs ) for i in xrange(N) ]
@@ -108,6 +109,12 @@ class RandomNumberGenerator:
         '''
         rand = self.Get()
         return x0 + math.sqrt( rand * (x1-x0)*(mid-x0) ) if rand < (mid-x0)/(x1-x0) else x1 - math.sqrt( (1-rand) * (x1-x0) * (x1-mid) )
+    
+    def Correlated( self, functions, CovarianceMatrix ):
+        '''
+            Return a list of corralated random numbers according to the CovarianceMatrix and using kind as generator. Needed arguments must be given as keyword arguments.
+        '''
+        return _CorrelatedRandomNumbers( functions, CovarianceMatrix )
 
     def SamplePDF( self, pdf, x0, x1 ):
         '''
@@ -389,7 +396,7 @@ class LEcuyer(RandomNumberGenerator):
 class _Metropolis:
     '''
         Class for general function sampling.
-        '''
+    '''
     def __init__( self, pdf, x0 = 0., x1 = 1., Random = MersenneTwister() ):
         '''
             Initialize with some function pdf and an interval [x0,x1).
@@ -414,8 +421,25 @@ class _Metropolis:
         
         return self.x0
 
+class _CorrelatedRandomNumbers:
+    '''
+        Random number generator that takes into account dependences among variables.
+    '''
+    def __init__( self, Vector, CovarianceMatrix ):
+        '''
+            Initialize with a vector of functions that produce the random numbers.
+        '''
+        self.uncorrelated = Array.Vector( Vector )
+        self.rot_matrix   = Array.Matrix( CovarianceMatrix ).Cholesky()
+        
+    def __call__( self ):
+        '''
+            Get a list of correlated random numbers.
+        '''
+        return list( self.uncorrelated.Apply( lambda x: x.__call__() ) ** self.rot_matrix )
+
 if __name__ == '__main__':
-    from ROOT import TH1F
+    from ROOT import TH1F, TH2F
     from Plots import PutInCanvas
     from Statistics import Distribution
     lcg = LCG()
@@ -424,7 +448,7 @@ if __name__ == '__main__':
     pmg = ParkMiller()
     leg = LEcuyer()
     
-    fun = Distribution( lambda x: 0.8 * math.exp(-4.*x) + math.exp( -0.5*( (x-.5)/0.012 )**2 ) + 0.3 * math.exp( -0.5*( (x-.55)/0.01 )**2 ), 0, 1, 1e4, normalized = False )
+    fun = Distribution( lambda x: 0.8 * math.exp(-4.*x) + math.exp( -0.5*( (x-.5)/0.015 )**2 ) + 0.3 * math.exp( -0.5*( (x-.55)/0.01 )**2 ), 0, 1, 1e4, normalized = False )
     pdfsample = lcg.SamplePDF( fun, 0, 1 )
     
     hlcg  = TH1F( 'lcg', 'lcg',  15,  0, 15 )
@@ -450,3 +474,16 @@ if __name__ == '__main__':
         hmet.Fill( pdfsample() )
 
     canv = PutInCanvas( [hlcg,hmcg,hmtg,hpmg,hleg,hmet] )
+
+    hcorr = TH2F('hcorr','hcorr',100,0,1,200,-5,5)
+    alpha = -0.9
+    C = [[1,alpha],[alpha,1]]
+    corrg = mtg.Correlated( [ mtg.Uniform, mtg.Uniform], C )
+    for i in range(10000): x = hcorr.Fill( *corrg() )
+    canv2 = PutInCanvas( [hcorr], ['zcol'] )
+
+
+
+
+
+
