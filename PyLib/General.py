@@ -25,24 +25,6 @@ rint = lambda x: int(      round( x ) )
 fint = lambda x: int( math.floor( x ) )
 cint = lambda x: int( math. ceil( x ) )
 
-def S2HMS( s ):
-    h, m = 0, 0
-
-    if s >= 3600:
-        h  = s // 3600
-        s -= h * 3600.
-    if s >= 60:
-        m  = s // 60
-        s -= m * 60
-
-    return h, m, s
-
-def ElapsedTime( t0 = 0. ):
-    ''' Returns the diffence in time since t0 in a readable way.'''
-
-    dt = S2HMS( time.time() - t0 )
-    return '{0} h {1} min {2} s'.format(*dt)
-
 def Wait( message = 'Waiting...' ):
     ''' Prints a message and waits for a input.'''
 
