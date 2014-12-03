@@ -82,24 +82,37 @@ class Vector:
         if isinstance( other, self.__class__ ):
             return self.__class__( *map( operator.div, self.values, other.values) )
         return self.__class__( *[ v / other for v in self.values ])
-    
+
+    def __truediv__( self, other ):
+        '''
+            True division operation. Same as __div__.
+        '''
+        return self.__div__( other )
+
     def __rdiv__( self, number ):
         '''
             Division operation. Same as __div__.
         '''
         return self.__class__( *[ other / v for v in self.values ] )
     
-    def __getitem__(self,index):
+    def __getitem__( self, index ):
         '''
             Returns the specified element "index".
         '''
-        return self.values[index]
+        return Vector( self.values[index] ) if isinstance( index, slice ) else self.values[index]
     
-    def __setitem__(self,index,value):
+    def __setitem__( self, index, value ):
         '''
             Assign "value" to item in "index".
         '''
         self.values[index] = value
+    
+    def __delitem__( self, index ):
+        '''
+            Remove item in index.
+        '''
+        del self.values[index]
+        self.length -= 1
     
     def __len__(self):
         '''
@@ -223,12 +236,16 @@ class Vector:
         '''
             Sets all the values to 0.0 .
         '''
-        
         self.values = copy.deepcopy(Zeros(self.length))
 
     def Copy( self ):
         return self.__class__( self.values )
 
+    def ToList( self ):
+        '''
+            Return the object as list representation.
+        '''
+        return list( self )
 
 
 class Matrix( Vector ):
@@ -264,6 +281,13 @@ class Matrix( Vector ):
             Containment aasertion.
         '''
         return any( [ x in row for row in self.values ] )
+    
+    def __delitem__( self, index ):
+        '''
+            Remove index-th row.
+        '''
+        del self.values[index]
+        self.rows -= 1
 
     def __str__( self ):
         '''
@@ -275,7 +299,13 @@ class Matrix( Vector ):
         '''
             Square matrix assertion.
         '''
-        return self.rows is self.cols
+        return self.rows == self.cols
+    
+    def Diag( self ):
+        '''
+            Return the diagonal of the matrix.
+        '''
+        return Vector( [ self[i][i] for i in range(self.rows) ] )
     
     def T(self):
         '''
@@ -293,7 +323,7 @@ class Matrix( Vector ):
         '''
             Trace operation.
         '''
-        return sum( [ self.values[i][i] for i in range(min(self.rows,self.cols)) ] )
+        return sum( self.Diag() )
     
     def Trace(self):
         '''
@@ -362,8 +392,7 @@ class Matrix( Vector ):
         '''
             Perform the matrix diagonalization. Returns the diagonalized matrix and the eigenvectors as the rows of the second matrix.
         '''
-        if not self.IsSquare():
-            raise ValueError('Only square matrices can be diagonalized')
+        assert self.IsSquare(), ValueError('Only square matrices can be diagonalized')
 
         def findmax():
             maximum = 0.
@@ -406,64 +435,74 @@ class Matrix( Vector ):
         
         return D, V.T()
 
-    def Inverse(self):
+    def Inverse( self, method = 'GJ' ):
         '''
-            Performs matrix inversion using gauss method.
+            Return the inverse of the matrix using the specified method. The available possibilities are:
+            - GaussJordan      ==> GJ
+            - LU decomposition ==> LU
         '''
-        
-        new = Matrix(self)
+        if method == 'GJ':
+            return self._GaussJordan()
+        elif method == 'LU':
+            return self._LUInverse()
+        else:
+            return None
+
+    def Det( self, method = 'Adj', **kwargs ):
+        '''
+            Compute the determinant of the matrix using the specified method. Moreover, keyword arguments may be given. The available possibilities are (with arguments):
+            - Adjugate         ==> Adj ( row, col )
+            - LU decomposition ==> LU  ()
+        '''
+        if method == 'Adj':
+            return self._AdjugateDeterminant()
+        elif method == 'LU':
+            return self._LUDeterminant()
+        else:
+            return None
+
+    def _GaussJordan(self):
+        '''
+            Performs matrix inversion using Gauss-Jordan elimination.
+        '''
+        new = self.Copy()
         sol = Vector( range(self.rows) )
 
         for i in range( self.rows ):
             for j in range( self.cols ):
-                if i==j:
-                    new[i].Add(1.0)
-                else:
-                    new[i].Add(0.0)
-
+                new[i].Add( 1.0 if i == j else 0.0 )
+    
         def findmax(x):
-            max=abs(new[x][x])
-            row=x
-            col=x
-            for i in range(x,self.cols):
-                for j in range(x,self.cols):
-                    if abs(new[i][j])>max:
-                        max=abs(new[i][j])
-                        row=i
-                        col=j
-            return row,col
-
-        def interchangerows(a,b):
-            for k in range(2*self.cols):
-                new[a][k], new[b][k] = new[b][k], new[a][k]
-
-        def interchangecols(a,b):
-            sol[a], sol[b] = sol[b], sol[a]
-            for k in range(self.cols):
-                new[k][a], new[k][b] = new[k][b], new[k][a]
+            max = abs(new[x][x])
+            row = col = x
+            for i in range( x, self.cols ):
+                for j in range( x, self.cols ):
+                    if abs( new[i][j] ) > max:
+                        max = abs( new[i][j] )
+                        row, col = i, j
+            return row, col
     
         for i in range(self.cols):
-            row,col = findmax(i)
-            interchangerows(i,row)
-            interchangecols(i,col)
+            row, col = findmax(i)
             
-            for j in range(i+1,self.cols):
+            if not row == i: #interchange rows
+                new[i], new[row] = new[row], new[i]
+            
+            if not col == i: #interchange cols
+                sol[i], sol[col] = sol[col], sol[i]
+                for k in range( self.cols ):
+                    new[k][i], new[k][col] = new[k][col], new[k][i]
+            
+            for j in range( i+1, self.cols ):
                 factor = new[j][i]/new[i][i]
-                for k in range(i,2*self.cols):
-                    new[j][k] -= factor*new[i][k]
-
-        for i in range(self.cols-1,-1,-1):
-            
-            factor = new[i][i]
-            for j in range( i, 2*self.cols ):
-                new[i][j] /= factor
-            
+                new[j] -= factor * new[i]
+        
+        for i in reversed(range(self.cols)):
+            new[i] /= new[i][i]
             for j in range(i):
-                factor = new[j][i]
-                for k in range( i, 2*self.cols ):
-                    new[j][k] -= factor * new[i][k]
-        M = Zeros( self.cols, self.cols )
+                new[j] -= new[j][i] * new[i]
 
+        M = Zeros( self.cols, self.cols )
         for i in range( self.cols ):
             for j in range( self.cols ):
                 M[sol[i]][j] = new[i][j+self.cols]
@@ -474,20 +513,11 @@ class Matrix( Vector ):
         '''
             Return the submatrix correspondent to remove the row-th row and the col-th column.
         '''
-        
-        sub = Zeros(self.rows-1,self.cols-1)
-        for i in range(self.rows):
-            for j in range(self.cols):
-                if   i < row and j < col:
-                    sub[i][j] = self[i][j]
-                elif i > row and j < col:
-                    sub[i-1][j] = self[i][j]
-                elif i < row and j > col:
-                    sub[i][j-1] = self[i][j]
-                elif i > row and j > col:
-                    sub[i-1][j-1] = self[i][j]
-        
-        return sub
+        sub = Matrix(self)
+        del sub[row]
+        sub = sub.T()
+        del sub[col]
+        return sub.T()
 
     def Minor( self, row, col ):
         '''
@@ -507,14 +537,14 @@ class Matrix( Vector ):
         '''
         return Matrix( [ [ self.Cofactor(i,j)  for j in range(self.cols)] for i in range(self.rows) ] )
 
-    def Det( self, row = None, col = None ):
+    def _AdjugateDeterminant( self, row = None, col = None ):
         '''
-            Return the determinant of the matrix.
+            Return the determinant of the matrix. For ranges >= 4 a hint for adjugate decomposition may be used.
         '''
         assert self.IsSquare(), ValueError('The determinant can only be computed for a square matrix')
         
         # More efficient methods for ranges < 4.
-        if self.rows is 1:
+        if   self.rows is 1:
             return self[0][0]
         elif self.rows is 2:
             return self[0][0] * self[1][1] - self[0][1] * self[1][0]
@@ -536,69 +566,160 @@ class Matrix( Vector ):
             else:
                 return sum([ self[row][i] * self.Cofactor(row,i) for i in range(self.cols) ])
 
-    def Determinant( self, row = None, col = None):
+    def Determinant( self, row = None, col = None ):
         '''
-            Returns the determinant of the matrix. Same as Det.
+            Returns the determinant of the matrix. Same as Matrix.Det .
         '''
         return self.Det(row,col)
 
-    def Simetric( self ):
+    def Symmetric( self ):
         '''
             Returns the simetric part.
         '''
         return 0.5 * ( self + self.T() )
 
-    def AntiSimetric( self ):
+    def AntiSymmetric( self ):
         '''
             Returns the antisimetric part.
         '''
         return 0.5 * ( self - self.T() )
 
+    def Cholesky( self ):
+        '''
+            Cholesky decomposition.
+        '''
+        L = Zeros(self.rows,self.rows)
+        for j in range(self.cols):
+            for i in range(j,self.rows):
+                L[i][j] = self[i][j] - sum( L[i][k] * L[j][k] for k in range(j) )
+                if i == j:
+                    L[i][j] **= 0.5
+                else:
+                    L[i][j] /= L[j][j]
+        return L.T()
+
+    def LU( self ):
+        '''
+            Perform LU decomposition. Returns L-, U- and P-matrices.
+        '''
+        assert self.IsSquare(), ValueError('Matrix must be square.')
+        
+        P = Identity(self.rows)
+        L = Identity(self.rows)
+        U = Matrix(self)
+
+        for i in range(self.rows-1):
+            max_index = U.T()[i][i:].Maxpos( Abs = abs )[0] + i
+            if not i == max_index:
+                U[i],U[max_index] = U[max_index], U[i]
+                P[i],P[max_index] = P[max_index], P[i]
+            for j in range(i+1,self.rows):
+                factor = U[j][i] / U[i][i]
+                U[j] -= U[i] * factor
+                L[j][i] = factor
+
+        return L,U,P
+
+    def QR( self ):
+        '''
+            Compute QR decomposition. Returns Q- and R-matrices.
+        '''
+        Q = self.T()
+        for i in range(self.cols):
+            Qi = Q[i].Copy()
+            for j in range(i):
+                Q[i] -= ( Q[j] ** Qi ) * Q[j]
+            Q[i] /= ( Q[i] ** Q[i] ) ** 0.5
+            
+        R = Q ** self
+        return Q.T(), R
+
+    def _LUInverse(self):
+        L, U, P = self.LU()
+        return U.Inverse('GJ') ** L.Inverse('GJ') ** P
+
+    def _LUDeterminant(self):
+        L, U, P = self.LU()
+        return reduce( operator.mul, U.Diag() ) / P.Det('Adj')
+
+    def ToList( self ):
+        '''
+            Return the object as list representation.
+        '''
+        return map( Vector.ToList, self.values )
+
 
 class Vector3(Vector):
-
+    '''
+        Class dedicated for operatios in 3 or less dimensions.
+    '''
     def __init__( self, x = 0., y = 0., z = 0. ):
+        '''
+            Initialize with a sequence or directly the components. Also works for 1 and 2 dimmensions.
+        '''
         if isinstance( x, (list,tuple,Vector) ):
             x, y, z = x
         Vector.__init__( self, x, y, z )
 
     def __xor__( self, other ):
-        if not isinstance( other, Vector3 ):
-            raise TypeError('The cross product must be performed with another 3-Vector')
+        '''
+            Vector (i.e. inner) product.
+        '''
+        assert isinstance( other, Vector3 ), TypeError('The cross product must be performed with another 3-Vector')
+        
         return Vector3( *[ +( self[1]*other[2] - self[2]*other[1] ),
                            -( self[0]*other[2] - self[2]*other[0] ),
                            +( self[0]*other[1] - self[1]*other[0] )] )
 
     def __abs__( self ):
+        '''
+            Magnitude.
+        '''
         return math.sqrt( self ** self )
 
     def Unitary( self ):
+        '''
+            Unitary vector.
+        '''
         return Vector3( self/abs(self) )
 
     def Angle( self, other ):
-        ''' Angle between two 3 vectors. Is 0 if one of them is 0.'''
-        if not abs(self) or not abs(other):
-            return 0.
+        '''
+            Angle between two 3 vectors.
+        '''
         return math.acos( self.Unit() ** other.Unit() )
 
 
 class Vector4(Vector):
-
+    '''
+        Class dedicated for operatios in Minskowsky space.
+    '''
     def __init__( self, E = 0., x = 0., y = 0., z = 0. ):
+        '''
+            Initialize with a sequence or directly the components. Also works for 1 and 2 dimmensions.
+        '''
+        if isinstance( E, (list,tuple,Vector) ):
+            E, x, y, z = E
         Vector.__init__( self, E, Vector3( x, y, z ) )
         self.E = self.values[0]
         self.v = self.values[1]
 
     def __abs__( self ):
+        '''
+            Magnitude.
+        '''
         return math.sqrt( self.E**2 - self.v ** self.v )
 
     def __str__( self ):
+        '''
+            String representation.
+        '''
         return '( ' +  str(self.E) + ', ' + str(self.v) + ' )'
 
 
 def Zeros( rows, cols = None ):
     '''
-        Matrix filled with zeros.
+        Vector/Matrix filled with zeros.
     '''
     if cols:
         return Matrix( [ [0.] * cols ] * rows )
@@ -606,13 +727,13 @@ def Zeros( rows, cols = None ):
 
 def Ones( rows, cols = None ):
     '''
-        Matrix filled with ones.
+        Vector/Matrix filled with ones.
     '''
     return Zeros( rows, cols ) + 1.
 
 def Identity( rows ):
     '''
-        Identity matrix. Must be square.
+        Rows x rows identity matrix.
     '''
     return Matrix( [ [ 1. if j==i else 0. for j in range(rows) ] for i in range(rows) ])
 
