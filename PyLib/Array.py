@@ -239,7 +239,7 @@ class Vector:
         self.values = copy.deepcopy(Zeros(self.length))
 
     def Copy( self ):
-        return self.__class__( self.values )
+        return self.__class__( *self.values )
 
     def ToList( self ):
         '''
@@ -390,7 +390,7 @@ class Matrix( Vector ):
 
     def Diagonalize( self, p=1e-4 ):
         '''
-            Perform the matrix diagonalization. Returns the diagonalized matrix and the eigenvectors as the rows of the second matrix.
+            Perform the matrix diagonalization. Returns the diagonalized matrix (D) and a matrix of eigenvectors (V), been each row a eigenvector, i.e. A = VT ** D ** V.
         '''
         assert self.IsSquare(), ValueError('Only square matrices can be diagonalized')
 
@@ -401,27 +401,28 @@ class Matrix( Vector ):
                 for j in range( self.cols ):
                     if i==j:
                         continue
-                    if abs( self[i][j] ) > maximum:
-                        maximum = abs( self[i][j] )
+                    if abs( D[i][j] ) > maximum:
+                        maximum = abs( D[i][j] )
                         maxpos  = [i,j]
             return maxpos
         
         def check():
             for i in range( self.rows ):
                 for j in range( i+1, self.cols ):
-                    if abs( self[i][j] ) > p :
+                    if abs( D[i][j] ) > p :
                         return False
             return True
         
-        D  = Matrix( self )
+        D  = self.Copy()
         V  = Identity( self.rows )
         
         while not check():
-            row, col = findmax( D )
+            row, col = findmax()
             
             t = ( D[col][col] - D[row][row] ) / ( 2. * D[row][col] )
-            t = Sign(t) / ( abs(t) + sqrt( t**2 + 1 ) )
-            c = 1. / sqrt( t**2 + 1 )
+            t = 1 / ( abs(t) + math.sqrt( t**2 + 1 ) )
+            t = -t if t < 0 else t
+            c = 1. / math.sqrt( t**2 + 1 )
             s = c * t
             
             R = Identity( self.rows )
@@ -596,7 +597,7 @@ class Matrix( Vector ):
                     L[i][j] **= 0.5
                 else:
                     L[i][j] /= L[j][j]
-        return L.T()
+        return L
 
     def LU( self ):
         '''
