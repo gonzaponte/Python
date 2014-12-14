@@ -31,12 +31,36 @@ def BestUnits( dt, name = 'unknown' ):
     dt -= mins * 60
     return 'Ellapsed time in {4}: {0} days {1} h {2} min {3:d} s'.format(days,hours,mins,dt,name)
 
-
 def ExecutionTime( function ):
     def TimedFunction( *args, **kargs ):
         t0 = _time()
         result = function( *args, **kargs )
-        print BestUnits( _time() - t0 , function.__name__ )
-        return result
-    
+        dt = _time() - t0
+        print BestUnits( dt , function.__name__ )
+        return dt
     return TimedFunction
+
+def ExecutionTime2( printing = True ):
+    def ExecutionTime( function ):
+        def TimedFunction( *args, **kargs ):
+            t0 = _time()
+            result = function( *args, **kargs )
+            dt = _time() - t0
+            if printing:
+                print BestUnits( dt , function.__name__ )
+            else:
+                return dt
+        return TimedFunction
+    return ExecutionTime
+
+def AverageExecutionTime( N = 100, printing = True ):
+    def ExecutionTime( function ):
+        decfun = ExecutionTime2(False)(function)
+        def TimedFunction( *args, **kargs ):
+            average = sum( decfun(*args,**kargs) for i in range(N) ) / N
+            if printing:
+                print BestUnits( average, function.__name__ )
+            else:
+                return average
+        return TimedFunction
+    return ExecutionTime
