@@ -47,20 +47,22 @@ def readdata( filename, separator = ' ', type = 'float', skip = 0):
     lines = f.readlines()
     f.close()
     
-    ndata = len ( lines[0].split(separator) )
+    ndata = len ( lines[skip].split(separator) )
     vars=[ [] for i in range(ndata) ]
     
     for i,line in enumerate(lines):
         if i<skip:
             continue
         aux = line.split(separator)
-        if type == 'float':
-            map( lambda i,x: vars[i].append( float(x) ), range( len(aux) ), aux )
-        elif type == 'int':
-            map( lambda i,x: vars[i].append( int  (x) ), range( len(aux) ), aux )
-        elif type == 'str':
-            map( lambda i,x: vars[i].append( str  (x) ), range( len(aux) ), aux )
-
+        try:
+            if type == 'float':
+                map( lambda i,x: vars[i].append( float(x) ), range( len(aux) ), aux )
+            elif type == 'int':
+                map( lambda i,x: vars[i].append( int  (x) ), range( len(aux) ), aux )
+            elif type == 'str':
+                map( lambda i,x: vars[i].append( str  (x) ), range( len(aux) ), aux )
+        except:
+            raise ValueError('Error reading line {0}:\n{1}'.format(i,line) )
     return vars[0] if ndata is 1 else vars
 
 def PrintVars( *Vars ):
