@@ -785,6 +785,53 @@ def isin(valor,lista): #Para buscar nun diccionario usar nome_dicionario.keys().
 
 
 
+def LogGamma( x ):
+    '''
+        log( Gamma(x) ) where Gamma is the Euler-Gamma function.
+        '''
+    t  =   x + 5.5
+    t -= ( x + 0.5 ) * math.log( t )
+    y  =  1.000000000190015
+    y += 76.18009172947146     / ( x + 1. )
+    y -= 86.50532032941677     / ( x + 2. )
+    y += 24.01409824083091     / ( x + 3. )
+    y -=  1.231739572450155    / ( x + 4. )
+    y +=  0.001208650973866179 / ( x + 5. )
+    y -=  0.5395239384953e-5   / ( x + 6. )
+    
+    return math.log( 2.5066282746310005 * y / x ) - t
+def Erf( x, p = 1e-15 ):
+    '''
+        Error function up to x with precision p.
+        '''
+    if not x:
+        return 0.
+    
+    dif = p + 1.
+    new = 0.
+    n   = 0
+    
+    while dif > p:
+        old  = new
+        new += x ** ( 2 * n + 1 ) / ( ( 2*n + 1. ) * Factorial( n ) )
+        n   += 1
+        new -= x ** ( 2 * n + 1 ) / ( ( 2*n + 1. ) * Factorial( n ) )
+        n   += 1
+        dif  = abs( 1. - old/new )
+    
+    return 2. * new / math.sqrt( math.pi )
+
+def Cerf( x, p = 1e-15 ):
+    '''
+        Complementary error function from x with precision p.
+        '''
+    return 1. - Erf( x, p )
+
+def IncompleteGamma( x, a ):
+    '''
+        Return the value of the incomplete gamma function.
+        '''
+    return math.exp(-a) if x is 1 else math.sqrt(pi) * Cerf( math.sqrt(pi) ) if x == 0.5 else (x-1) * IncompleteGamma(x-1,a) + math.pow( a, x - 1 ) * math.exp(-a)
 
 
 
