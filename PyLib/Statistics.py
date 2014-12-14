@@ -14,6 +14,7 @@ import General
 import Sequences
 import Plots
 import random
+import Array
 
 def Mean( data, weights = None ):
     '''
@@ -39,31 +40,107 @@ def Covariance( x, y, weights = None, xmean = None, ymean = None ):
     ymean = Mean( y, weights ) if ymean is None else ymean
 
     if weights:
-        normfactor = sum( weights )/ ( sum( weights )**2 - sum ( map( operator.mul, weights, weights ) ) )
+        V1 = sum( weights )
+        V2 = sum ( wi**2 for wi in weights )
+        normfactor = V1/ ( V1**2 - V2 )
         return normfactor * sum( map( lambda x,y,w: w * ( x - xmean ) * ( y - ymean ), x, y, weights ) )
     else:
-        return sum( map( lambda x,y: ( x - xmean ) * ( y - ymean ), x, y ) ) / ( len(x) - 1 )
+        return sum( map( lambda x,y: ( x - xmean ) * ( y - ymean ), x, y ) ) / ( len(x) - 1. )
 
 def Variance( data, weights = None, datamean = None ):
     '''
         Returns the variance for a given list of numbers. It can be either a list/tuple or a dictionary with the weight asociated to each value. It also accepts the mean of the distribution as a parameter.
     '''
-    
     return Covariance( data, data, weights, datamean, datamean )
 
 def RMS( data, weights = None, datamean = None ):
     '''
         Returns the standard desviation for a given list of numbers. It can be either a list/tuple or a dictionary with the uncertainty asociated to each value. It also accepts the mean of the distribution as a parameter.
     '''
-    
     return math.sqrt( Variance( data, weights, datamean ) )
 
-def Correlation( x, y, weigths = None, xmean = None, ymean = None ):
+def Correlation( x, y, weights = None, xmean = None, ymean = None ):
     '''
         Returns the correlation factor between two lists of data.
     '''
-    
     return Covariance( x, y, weights, xmean, ymean ) / ( RMS( x, weights, xmean ) * RMS( y, weights, ymean ) )
+
+def CovarianceMatrix( *args, **kwargs ):
+    '''
+        Compute the covariance matrix of the input dataset. Weights must be set as keyword argument: weights = None (default).
+    '''
+    
+    weights = kwargs.get('weights')
+    N   = len( args )
+    CVM = Array.Zeros( N, N )
+    means = [ Mean(x,weights) for x in args ]
+    for i in range(N):
+        x = args[i]
+        for j in range(i,N):
+            CVM[i][j] = Covariance( x, args[j], weights, means[i], means[j] )
+            if i == j: # Just to dont sum twice when summing the transpose
+                CVM[i][j] *= .5
+
+    return CVM + CVM.T()
+
+def CorrelationMatrix( *args, **kwargs ):
+    '''
+        Compute the correlation matrix of the input dataset. Weights must be set as keyword argument: weights = None (default).
+    '''
+    
+    weights = kwargs.get('weights')
+    N   = len( args )
+    CRM = Array.Identity( N ) * 0.5
+    means = [ Mean(x,weights) for x in args ]
+    for i in range(N):
+        x = args[i]
+        for j in range(i+1,N):
+            CRM[i][j] = Correlation( x, args[j], weights, means[i], means[j] )
+    
+    return CRM + CRM.T()
+
+def Skewness( data, weights = None, datamean = None, datavariance = None ):
+    '''
+        Compute skewness for a dataset with or without weights. NOT CHECKED
+    '''
+    if datamean is None:
+        datamean     = Mean(data,weights)
+    if datavariance is None:
+        datavariance = Variance( data, weights, datamean )
+    
+    if weights:
+        V1 = sum( weights )
+        V2 = sum ( wi**2 for wi in weights )
+        V3 = sum ( wi**3 for wi in weights )
+        normfactor = V1**2/ ( V1**3 - 3 * V1 * V2 + 2 * V3 )
+        return normfactor * sum( wi * ( xi - datamean ) ** 3 for xi,wi in zip( data, weights ) )
+    else:
+        ndata = len(data)
+        return sum( ( xi - datamean )**3 for xi in data ) * ndata / ( ( ndata - 1. ) * ( ndata - 2. ) )
+
+def Kurtosis( data, weights = None, datamean = None, datavariance = None, dataskewness = None ):
+    '''
+        Compute kurtosis for a dataset with or without weights. NOT CHECKED
+    '''
+    
+    if datamean is None:
+        datamean     = Mean(data,weights)
+    if datavariance is None:
+        datavariance = Variance( data, weights, datamean )
+    if dataskewness is None:
+        dataskewness = Skewness( data, weights, datamean, datavariance )
+
+    if weights:
+        V1 = sum( weights )
+        V2 = sum ( wi**2 for wi in weights )
+        V3 = sum ( wi**3 for wi in weights )
+        V4 = sum ( wi**4 for wi in weights )
+        normfactor4 = V1 * ( V1**4 - 4 * V1 * V3 + 3 * V2**2 ) / ( ( V1**2 - V2 ) * ( V1**4 - 6 * V1**2 * V2 + 8 * V1 * V3 + 3 * V2**2 - 6 * V4 ) )
+        normfactor2 = 3 * ( V1**2 - V2 ) * ( V1**4 - 2 * V1**2 * V2 + 4 * V1 * V3 - 3 * V2**2 ) / ( V1**2 * ( V1**4 - 6 * V1**2 * V2 + 8 * V1 * V3 + 3 * V2**2 - 6 * V4 ) )
+        return normfactor4 * sum( wi * ( xi - datamean ) ** 4 for xi,wi in zip( data, weights ) ) - normfactor2 * datavariance
+    else:
+        ndata = len(data)
+        return sum( ( xi - datamean )**4 for xi in data ) * ndata * ( ndata + 1. ) / ( ( ndata - 1. ) * ( ndata - 2. ) * ( ndata - 3. ) ) - 3 * ( ndata - 1. )**2 / ( ( ndata - 2. ) * ( ndata - 3. ) ) * datavariance**2
 
 def Weights( uncertainties ):
     '''
