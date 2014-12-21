@@ -833,6 +833,33 @@ def IncompleteGamma( x, a ):
         '''
     return math.exp(-a) if x is 1 else math.sqrt(pi) * Cerf( math.sqrt(pi) ) if x == 0.5 else (x-1) * IncompleteGamma(x-1,a) + math.pow( a, x - 1 ) * math.exp(-a)
 
+def readdata( filename, separator = ' ', type = 'float', skip = 0):
+    ''' Reads data from a file and returns a list of lists of data. If there is more than one column of data, you can specify the separator between them which is a space by default. Also, in order to convert this data from strings to numbers you can specify the type of numbers, which is taken like floats by default, but you can choose also integers.'''
+    
+    f = open(filename,'r')
+    lines = f.readlines()
+    f.close()
+    
+    ndata = len ( lines[skip].split(separator) )
+    vars=[ [] for i in range(ndata) ]
+    
+    #    if not isinstance(type,(list,tuple)):
+    #        type = [type] * ndata
+    
+    for i,line in enumerate(lines):
+        if i<skip:
+            continue
+        aux = line.split(separator)
+        try:
+            if type == 'float':
+                map( lambda i,x: vars[i].append( float(x) ), range( len(aux) ), aux )
+            elif type == 'int':
+                map( lambda i,x: vars[i].append( int  (x) ), range( len(aux) ), aux )
+            elif type == 'str':
+                map( lambda i,x: vars[i].append( str  (x) ), range( len(aux) ), aux )
+        except:
+            raise ValueError('Error reading line {0}:\n{1}'.format(i,line) )
+    return vars[0] if ndata is 1 else vars
 
 
 
