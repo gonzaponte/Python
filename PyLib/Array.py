@@ -99,7 +99,7 @@ class Vector:
         '''
             Returns the specified element "index".
         '''
-        return Vector( self.values[index] ) if isinstance( index, slice ) else self.values[index]
+        return self.__class__( self.values[index] ) if isinstance( index, slice ) else self.values[index]
     
     def __setitem__( self, index, value ):
         '''
@@ -509,7 +509,27 @@ class Matrix( Vector ):
                 M[sol[i]][j] = new[i][j+self.cols]
 
         return M
+    
+    def Pick( self, rows = [], cols = [] ):
+        '''
+            Return the selected rows and cols.
+        '''
+        M = self.Copy()
 
+        for i in reversed(range(self.rows)):
+            if i in rows:
+                continue
+            del M[i]
+        M = M.T()
+
+        for i in reversed(range(self.cols)):
+            if i in cols:
+                continue
+            del M[i]
+        M = M.T()
+        
+        return M
+    
     def SubMatrix( self, row, col ):
         '''
             Return the submatrix correspondent to remove the row-th row and the col-th column.
