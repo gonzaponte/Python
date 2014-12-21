@@ -51,8 +51,9 @@ class Units:
     TeV = 1e12             * eV
     PeV = 1e15             * eV
 
-#    amu2kg    =   1.66053886e-27
-#    amu2MeV   = 931.4943551262353
+class Conversions:
+    amu2kg    =   1.66053886e-27
+    amu2MeV   = 931.4943551262353
 
 class ParticlesMasses:
     '''
