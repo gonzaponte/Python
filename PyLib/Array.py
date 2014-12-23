@@ -420,9 +420,9 @@ class Matrix( Vector ):
             row, col = findmax()
             
             t = ( D[col][col] - D[row][row] ) / ( 2. * D[row][col] )
-            t = 1 / ( abs(t) + math.sqrt( t**2 + 1 ) )
+            t = 1. / ( abs(t) + math.sqrt( t**2 + 1. ) )
             t = -t if t < 0 else t
-            c = 1. / math.sqrt( t**2 + 1 )
+            c = 1. / math.sqrt( t**2 + 1. )
             s = c * t
             
             R = Identity( self.rows )
@@ -515,17 +515,19 @@ class Matrix( Vector ):
             Return the selected rows and cols.
         '''
         M = self.Copy()
-
-        for i in reversed(range(self.rows)):
-            if i in rows:
-                continue
-            del M[i]
+        
+        if rows:
+            for i in reversed(range(self.rows)):
+                if i in rows:
+                    continue
+                del M[i]
         M = M.T()
-
-        for i in reversed(range(self.cols)):
-            if i in cols:
-                continue
-            del M[i]
+        
+        if cols:
+            for i in reversed(range(self.cols)):
+                if i in cols:
+                    continue
+                del M[i]
         M = M.T()
         
         return M
