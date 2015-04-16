@@ -15,6 +15,15 @@ import Sequences
 import Plots
 import random
 import Array
+from ROOT import TCanvas,TH1F
+
+def Moment( order, data, weights = None, mean = None ):
+    '''
+        Return the order-th moment of the data with the given weights. For central moments use mean = Mean( data, weights ).
+    '''
+    if mean is None:
+        mean = 0.
+    return sum( ( d - i )**order for d in data )/ len(data) if weights is None else 0.
 
 def Mean( data, weights = None ):
     '''
@@ -67,13 +76,13 @@ def Correlation( x, y, weights = None, xmean = None, ymean = None ):
 
 def CovarianceMatrix( *args, **kwargs ):
     '''
-        Compute the covariance matrix of the input dataset. Weights must be set as keyword argument: weights = None (default).
+        Compute the covariance matrix of the input dataset. Weights and means must be set as keyword argument: weights = None (default).
     '''
     
     weights = kwargs.get('weights')
     N   = len( args )
     CVM = Array.Zeros( N, N )
-    means = [ Mean(x,weights) for x in args ]
+    means = kwargs.get('means',[ Mean(x,weights) for x in args ])
     for i in range(N):
         x = args[i]
         for j in range(i,N):
@@ -85,13 +94,13 @@ def CovarianceMatrix( *args, **kwargs ):
 
 def CorrelationMatrix( *args, **kwargs ):
     '''
-        Compute the correlation matrix of the input dataset. Weights must be set as keyword argument: weights = None (default).
+        Compute the correlation matrix of the input dataset. Weights and means must be set as keyword argument: weights = None (default).
     '''
     
     weights = kwargs.get('weights')
     N   = len( args )
     CRM = Array.Identity( N ) * 0.5
-    means = [ Mean(x,weights) for x in args ]
+    means = kwargs.get('means',[ Mean(x,weights) for x in args ])
     for i in range(N):
         x = args[i]
         for j in range(i+1,N):
@@ -301,6 +310,16 @@ class Distribution:
         '''
         yvalues = map( self.cdf, self.xvalues )
         return Plots.MakeH1( sorted( zip( self.xvalues, yvalues )  ) )
+    
+    def Draw( self, type = 'pdf' ):
+        '''
+            Draw the distribution.
+        '''
+        type = type.lower()
+        h = self.PDFHistogram() if type == 'pdf' else self.CDFHistogram() if type == 'cdf' else TH1F()
+        c = TCanvas()
+        h.Draw()
+        return c, h
 
     @staticmethod
     def FromData( xvals, yvals, OutOfRange = False ):

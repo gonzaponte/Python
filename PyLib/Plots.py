@@ -53,7 +53,7 @@ def PrintColorsTable():
 
     return c,h
 
-def Graph( x, y, xaxis='', yaxis='',title='', markerstyle = None, markersize = None ):
+def Graph( x, y, xaxis='', yaxis='',title='', markerstyle = None, markersize = None, markercolor = None ):
     '''
         Returns a TGraph made of x,y data with optional titles.
     '''
@@ -72,10 +72,13 @@ def Graph( x, y, xaxis='', yaxis='',title='', markerstyle = None, markersize = N
         graph.SetMarkerStyle( markerstyle )
     if markersize:
         graph.SetMarkerSize( markersize )
+    if markercolor:
+        graph.SetMarkerColor( markercolor )
+        graph.SetLineColor( markercolor )
 
     return graph
 
-def Graph2( x, y, z, xaxis='', yaxis='', zaxis = '', title='', markerstyle = None, markersize = None ):
+def Graph2( x, y, z, xaxis='', yaxis='', zaxis = '', title='', markerstyle = None, markersize = None, markercolor = None ):
     '''
         Returns a TGraph2D made of x,y,z data with optional titles.
     '''
@@ -96,7 +99,11 @@ def Graph2( x, y, z, xaxis='', yaxis='', zaxis = '', title='', markerstyle = Non
         graph.SetMarkerStyle( markerstyle )
     if markersize:
         graph.SetMarkerSize( markersize )
-    
+    if markercolor:
+        graph.SetMarkerColor( markercolor )
+        graph.SetLineColor( markercolor )
+
+
     return graph
 
 def ErrorsGraph( x, y, ex, ey, xaxis='', yaxis='',title='' ):
@@ -123,9 +130,16 @@ def ErrorsGraph( x, y, ex, ey, xaxis='', yaxis='',title='' ):
 def GetMax( histogram ):
     '''
         Returns the value of the bin with the greatest value.
-    '''
+        '''
     
     return histogram.GetBinContent( histogram.GetMaximumBin() )
+
+def GetMin( histogram ):
+    '''
+        Returns the value of the bin with the smallest value.
+    '''
+    
+    return histogram.GetBinContent( histogram.GetMinimumBin() )
 
 def Norm2integral( histogram ):
     '''
@@ -156,6 +170,7 @@ def Merge1D( histograms, xaxis = '', yaxis = '', title = '' ):
         h.Draw( 'SAME' )
 
     histograms[0].SetMaximum( max( map( GetMax, histograms ) ) )
+    histograms[0].SetMinimum( min( map( GetMin, histograms ) ) )
 
     if xaxis:
         histograms[0].GetXaxis().SetTitle( xaxis )

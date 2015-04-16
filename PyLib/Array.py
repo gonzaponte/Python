@@ -2,9 +2,9 @@
     Contains definitions of array-like objects and some related functions.
 '''
 from __future__ import division
-import copy
-import operator
-import math
+from copy import copy as _copy, deepcopy as _deepcopy
+from operator import add as _addition, mul as _multiplication, truediv as _division
+from math import ceil, floor, trunc, sqrt, acos as _acos
 
 class Vector:
     
@@ -16,9 +16,7 @@ class Vector:
             ...
         '''
         
-        # If only one value in "values" take it: avoid list( list( stuff ) )
-        data = list(values[0]) if len(values) is 1 and isinstance( values[0], (list,tuple,Vector) ) else list(values)
-        self.values = copy.deepcopy(data)
+        self.values = _deepcopy(list(values))
         self.length = len(self.values)
     
     def __add__( self, other ):
@@ -26,7 +24,7 @@ class Vector:
             Addition operation.
         '''
         if isinstance( other, self.__class__ ):
-            return self.__class__( *map( operator.add, self.values, other.values) )
+            return self.__class__( *map( _addition, self.values, other.values) )
         return self.__class__( *[ v + other for v in self.values ])
     
     def __radd__( self, other ):
@@ -58,7 +56,7 @@ class Vector:
             Multiplication operation.
         '''
         if isinstance( other, self.__class__ ):
-            return self.__class__( *map( operator.mul, self.values, other.values) )
+            return self.__class__( *map( _multiplication, self.values, other.values) )
         return self.__class__( *[ v * other for v in self.values ])
     
     def __rmul__( self, number ):
@@ -80,7 +78,7 @@ class Vector:
             Division operation.
         '''
         if isinstance( other, self.__class__ ):
-            return self.__class__( *map( operator.div, self.values, other.values) )
+            return self.__class__( *map( _division, self.values, other.values) )
         return self.__class__( *[ v / other for v in self.values ])
 
     def __truediv__( self, other ):
@@ -99,7 +97,11 @@ class Vector:
         '''
             Returns the specified element "index".
         '''
-        return self.__class__( self.values[index] ) if isinstance( index, slice ) else self.values[index]
+        if isinstance( index, (list,tuple,Vector) ):
+            return self.__class__( *[ self.__getitem__(i) for i in index ] )
+        if isinstance( index, slice ):
+            return self.__class__( *self.values[index] )
+        return self.values[index]
     
     def __setitem__( self, index, value ):
         '''
@@ -166,19 +168,19 @@ class Vector:
         '''
             Floor-round operation to each element.
         '''
-        return self.__class__( *map( math.floor, self.values ) )
+        return self.__class__( *map( floor, self.values ) )
 
     def __ceil__( self ):
         '''
             Ceil-round operation to each element.
         '''
-        return self.__class__( *map( math.ceil, self.values ) )
+        return self.__class__( *map( ceil, self.values ) )
 
     def __trunc__( self ):
         '''
             Truncation operation to each element.
         '''
-        return self.__class__( *map( math.trunc, self.values ) )
+        return self.__class__( *map( trunc, self.values ) )
 
     def __nonzero__( self ):
         '''
@@ -210,7 +212,7 @@ class Vector:
         '''
             Return the index and value of the greatest value in the vector. If the argument "Abs" is not None, absolute values are applied.
         '''
-        Abs = (lambda x: x) if Abs is None else abs
+        Abs = abs if Abs else (lambda x: x)
         maximum = Abs(self[0])
         maxpos  = 0
         for i in range(1,self.length):
@@ -223,7 +225,7 @@ class Vector:
         '''
             Return the index and value of the smallest value in the vector. If the argument "Abs" is not None, absolute values are applied.
         '''
-        Abs = (lambda x: x) if Abs is None else abs
+        Abs = abs if Abs else (lambda x: x)
         minimum = Abs(self[0])
         minpos  = 0
         for i in range(1,self.length):
@@ -236,7 +238,7 @@ class Vector:
         '''
             Sets all the values to 0.0 .
         '''
-        self.values = copy.deepcopy(Zeros(self.length))
+        self.values = _deepcopy(Zeros(self.length))
 
     def Copy( self ):
         return self.__class__( *self.values )
@@ -247,6 +249,27 @@ class Vector:
         '''
         return list( self )
 
+    def Insert( self, index, element ):
+        '''
+            Insert element in index.
+        '''
+        element = _deepcopy(element)
+        self.values.insert(index,element)
+        if isinstance(self,Matrix):
+            self.rows += 1
+        elif isinstance(self,Vector):
+            self.length += 1
+
+    insert = Insert
+
+    def Pop(self,index=-1):
+        '''
+            Return index-th element and remove it from list.
+        '''
+        element = self[index]
+        del self[index]
+        return element
+            
 
 class Matrix( Vector ):
     
@@ -261,9 +284,17 @@ class Matrix( Vector ):
             - Diagonalization is performed with the Diagonalize method.
             ...
         '''
+#        if len(values) is 1:
+#            if isinstance( values[0], Matrix ):
+#                data = _deepcopy( values[0].values )
+#            elif isinstance( values[0], (list,tuple) ):
+#                data = list(_deepcopy( values[0] ))
+#            else:
+#                data = list(values)
+#        else:
+#            data = list(values)
 
-        data = list(values[0]) if len(values) is 1 and isinstance( values[0], (list,tuple,Vector,Matrix) ) else list(values)
-        self.values = Vector( *map( Vector, data ) )
+        self.values = Vector( *[Vector(*v) for v in values ])
         self.rows   = len( self.values    ) if self.values else 0
         self.cols   = len( self.values[0] ) if self.values else 0
     
@@ -274,7 +305,7 @@ class Matrix( Vector ):
         if isinstance( other, self.__class__ ):
             return self.__class__( *[ [ row ** col for col in other.T().values ] for row in self.values ] )
         elif isinstance( other, Vector ):
-            return Vector( [ row ** other for row in self.values ] )
+            return Vector( *[ row ** other for row in self.values ] )
     
     def __contains__( self, x ):
         '''
@@ -305,7 +336,7 @@ class Matrix( Vector ):
         '''
             Return the diagonal of the matrix.
         '''
-        return Vector( [ self[i][i] for i in range(self.rows) ] )
+        return Vector( *[ self[i][i] for i in range(self.rows) ] )
     
     def T(self):
         '''
@@ -336,7 +367,7 @@ class Matrix( Vector ):
             Add a row to the matrix.
         '''
         assert isinstance( row, (list,tuple,Vector) ), TypeError('The added row must be a list/tuple/Vector instance')
-        self.values.Add( Vector(row) )
+        self.values.Add( Vector(*row) )
         self.rows += 1
 
     def AddCol( self, element ):
@@ -408,23 +439,26 @@ class Matrix( Vector ):
         
         def check():
             for i in range( self.rows ):
-                for j in range( i+1, self.cols ):
+                for j in range( self.cols ):
+                    if i==j:
+                        continue
                     if abs( D[i][j] ) > p :
-                        return False
-            return True
+                        return True
+            return False
         
         D  = self.Copy()
         V  = Identity( self.rows )
         
-        while not check():
+        while check():
             row, col = findmax()
             
             t = ( D[col][col] - D[row][row] ) / ( 2. * D[row][col] )
-            t = 1. / ( abs(t) + math.sqrt( t**2 + 1. ) )
-            t = -t if t < 0 else t
-            c = 1. / math.sqrt( t**2 + 1. )
+            s = -1. if t<0 else 1.
+            t = s / ( abs(t) + sqrt( t**2 + 1. ) )
+            c = 1. / sqrt( t**2 + 1. )
             s = c * t
-            
+            print D
+            print t,c,s, row,col
             R = Identity( self.rows )
             R[row][row] =  c
             R[col][col] =  c
@@ -467,8 +501,7 @@ class Matrix( Vector ):
             Performs matrix inversion using Gauss-Jordan elimination.
         '''
         new = self.Copy()
-        sol = Vector( range(self.rows) )
-
+        sol = Vector( *range(self.rows) )
         for i in range( self.rows ):
             for j in range( self.cols ):
                 new[i].Add( 1.0 if i == j else 0.0 )
@@ -536,7 +569,7 @@ class Matrix( Vector ):
         '''
             Return the submatrix correspondent to remove the row-th row and the col-th column.
         '''
-        sub = Matrix(self)
+        sub = self.Copy()
         del sub[row]
         sub = sub.T()
         del sub[col]
@@ -558,7 +591,29 @@ class Matrix( Vector ):
         '''
             Matrix with the cofactors.
         '''
-        return Matrix( [ [ self.Cofactor(i,j)  for j in range(self.cols)] for i in range(self.rows) ] )
+        return Matrix( *[ [ self.Cofactor(i,j)  for j in range(self.cols)] for i in range(self.rows) ] )
+    
+    def Break( self, i, j = None ):
+        '''
+            Break the matrix into 4 blocks. Cuts just before i,j (not including them. Returns them in "z" order.
+        '''
+        j = i if j is None else j
+        
+        M1 = Zeros(             i,             j )
+        M2 = Zeros(             i, self.cols - j )
+        M3 = Zeros( self.rows - i,             j )
+        M4 = Zeros( self.rows - i, self.cols - j )
+        for row in range(self.rows):
+            for col in range(self.cols):
+                if   row<i and col<j:
+                    M1[row][col] = self[row][col]
+                elif row<i and col>=j:
+                    M2[row][col-j] = self[row][col]
+                elif row>=i and col<j:
+                    M3[row-i][col] = self[row][col]
+                elif row>=i and col>=j:
+                    M4[row-i][col-j] = self[row][col]
+        return M1, M2, M3, M4
 
     def _AdjugateDeterminant( self, row = None, col = None ):
         '''
@@ -629,7 +684,7 @@ class Matrix( Vector ):
         
         P = Identity(self.rows)
         L = Identity(self.rows)
-        U = Matrix(self)
+        U = self.Copy()
 
         for i in range(self.rows-1):
             max_index = U.T()[i][i:].Maxpos( Abs = abs )[0] + i
@@ -663,7 +718,7 @@ class Matrix( Vector ):
 
     def _LUDeterminant(self):
         L, U, P = self.LU()
-        return reduce( operator.mul, U.Diag() ) / P.Det('Adj')
+        return reduce( _multiplication, U.Diag() ) / P.Det('Adj')
 
     def ToList( self ):
         '''
@@ -698,20 +753,36 @@ class Vector3(Vector):
         '''
             Magnitude.
         '''
-        return math.sqrt( self ** self )
+        return sqrt( self ** self )
 
     def Unitary( self ):
         '''
             Unitary vector.
         '''
         return Vector3( self/abs(self) )
-
+    
+    def Unit( self ):
+        '''
+            Unitary vector. Same as Unitary().
+        '''
+        return self.Unitary()
+    
     def Angle( self, other ):
         '''
             Angle between two 3 vectors.
         '''
-        return math.acos( self.Unit() ** other.Unit() )
+        return _acos( self.Unit() ** other.Unit() )
 
+    def RotationMatrix( self, axis = 'x' ):
+        '''
+            Returns the rotation matrix for transforming coordinates in the vector basis to the general basis.
+        '''
+        axis = axis.lower()
+        u = self.Unit()
+        v = Vector3( -u[1], u[0], 0 ).Unit()
+        w = (u ^ v).Unit()
+        M = Matrix( u, v, w ) if axis == 'x' else Matrix( v, u, w ) if axis == 'y' else Matrix( v, w, u ) if axis == 'z' else None
+        return M.T()
 
 class Vector4(Vector):
     '''
@@ -731,7 +802,7 @@ class Vector4(Vector):
         '''
             Magnitude.
         '''
-        return math.sqrt( self.E**2 - self.v ** self.v )
+        return sqrt( self.E**2 - self.v ** self.v )
 
     def __str__( self ):
         '''
@@ -739,14 +810,13 @@ class Vector4(Vector):
         '''
         return '( ' +  str(self.E) + ', ' + str(self.v) + ' )'
 
-
 def Zeros( rows, cols = None ):
     '''
         Vector/Matrix filled with zeros.
     '''
     if cols:
-        return Matrix( [ [0.] * cols ] * rows )
-    return Vector( [0.] * rows )
+        return Matrix( *( [ [0.] * cols ] * rows ) )
+    return Vector( *([0.] * rows) )
 
 def Ones( rows, cols = None ):
     '''
@@ -758,7 +828,7 @@ def Identity( rows ):
     '''
         Rows x rows identity matrix.
     '''
-    return Matrix( [ [ 1. if j==i else 0. for j in range(rows) ] for i in range(rows) ])
+    return Matrix( *[ [ 1. if j==i else 0. for j in range(rows) ] for i in range(rows) ])
 
 # examples and debug
 if __name__ == '__main__':
@@ -804,3 +874,37 @@ if __name__ == '__main__':
     print 'C[1][0]   =  ', C[1][0];    C[1][0] = 0
     print 'C[1][0]=0 => ', C
     print 'C.Size()   =  ', C.Size()
+
+'''
+from math import pi,cos,sin
+from ROOT import *
+
+#g = TGraph2D()
+#g.SetMarkerStyle(20)
+#g.SetMarkerSize(2)
+theta = 45 * pi / 180
+phi   = 45 * pi / 180
+
+o  = Vector3(0,0,0)
+x  = Vector3(1,0,0)
+y  = Vector3(0,1,0)
+z  = Vector3(0,0,1)
+u0 = Vector3( sin(theta) * cos(phi), sin(theta) * sin(phi), cos(theta) )
+v0 = Vector3(-sin(theta) * sin(phi), sin(theta) * cos(phi), 0          ).Unit()
+w0 = ( u0 ^ v0 ).Unit()
+
+M = u0.RotationMatrix('z')
+
+
+h = TH3I('a','',*([100,-1,1]*3) ); h.SetMarkerStyle(20)
+h.Fill( *(M**x) );h.Fill( *(M**y) );h.Fill( *(M**z) )
+u = TPolyLine3D();u.SetPoint(0,*o);u.SetPoint(1,*u0);u.SetLineColor(kRed)
+v = TPolyLine3D();v.SetPoint(0,*o);v.SetPoint(1,*v0);v.SetLineColor(kBlue)
+w = TPolyLine3D();w.SetPoint(0,*o);w.SetPoint(1,*w0);w.SetLineColor(kGreen)
+
+h.Draw()
+u.Draw('same')
+v.Draw('same')
+w.Draw('same')
+
+'''

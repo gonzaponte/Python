@@ -12,7 +12,6 @@ import math
 import operator
 
 import RandomNumbers
-import Sequences
 import Array
 
 from MathCoefs import ierf_coefficients as _ck, factorials as _factorials, double_factorials as _double_factorials
@@ -404,7 +403,28 @@ def Solve( M, N = None ):
             factor = m[j][i] / m[i][i]
             m[j] = map( lambda x,y: x - factor * y, m[j], m[i] )
     
-    return [ ( m[i][-1] - sum( [ x[j] * m[i][j] for j in range( i+1, f ) ] ) ) / m[i][i] for i in Sequences.Reversed(range(f)) ]
+    return [ ( m[i][-1] - sum( [ x[j] * m[i][j] for j in range( i+1, f ) ] ) ) / m[i][i] for i in range(f)[::-1] ]
+
+class Function:
+    '''
+        Generic function class.
+    '''
+    def __init__( self, function ):
+        '''
+            Initialize with some function.
+        '''
+        self.f  = function
+
+    def Derivative( self, step = 1e-6 ):
+        '''
+            Return the derivative function.
+        '''
+        step2 = step / 2.
+        step4 = step / 4.
+        step3 = step * 3.
+        f = lambda x: ( 8. * ( self.f(x+step4) - self.f(x-step4) ) - ( self.f(x+step2) - self.f(x-step2) ) ) / step3
+        return Function( f )
+
 
 class Polynom:
     '''
@@ -461,6 +481,12 @@ class Integrator:
         self.lower = lower  if not isinstance( lower, (tuple,list) ) else lower[0] if len(lower) is 1 else lower
         self.upper = upper  if not isinstance( upper, (tuple,list) ) else upper[0] if len(upper) is 1 else upper
         self.ndim  = len(lower) if isinstance( lower, (tuple,list) ) else 1
+    
+    def Trapezoid( self, max_error = 1e-3, lower = None, upper = None ):
+        N = ( ( upper - lower )**3 / max_error )**0.5
+        N = int(N)
+        lower = self.lower if lower is None else lower
+        upper = self.upper if upper is None else upper
     
     def MC( self, max_error = 1e-3, lower = None, upper = None ):
         '''

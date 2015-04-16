@@ -7,9 +7,10 @@
 # Last update: 11 / 04 / 2014
 #
 
-from math import ceil
-from copy import deepcopy
-from types import FunctionType
+from types import FunctionType as _function
+from RandomNumbers import LCG as _LCG
+
+_R = _LCG()
 
 def ArrayOf( element, rows, *cols ):
     ''' Return an array of dimensions rows x cols x ... filled with element.'''
@@ -106,7 +107,7 @@ def Apply( A, F, default = None ):
 def Eval( A, B ):
     ''' Evaluates an array of functions with the parameters in B.'''
     
-    if isinstance( A, FunctionType ):
+    if isinstance( A, _function ):
         return A(*B) if isinstance( B, tuple ) else A(B)
 
     if not isinstance( B, list ):
@@ -219,31 +220,64 @@ def Cumulative( L ):
 
     return R[1:]
 
-def Frequencies( l ):
+def Frequencies( Input ):
     ''' This function takes a list and returns a dictionary with the frecuency of each element.'''
-    
-    frecs={}
-    for element in l:
-        if element in frecs:
-            continue
-        frecs[element] = l.count( element )
-    
-    return frecs
-
+    return { element: l.count(element) for element in set(Input) }
 
 def Binning( nbins = 100, lower = 0., upper = 1.):
     ''' Generalization of range: returns a inverval sliced in several partitions (bins). The return is a list which values are the beginning of each bin. The arguments are the number of bins and the minimum and the maximum of the interval.'''
     
-    nbins = int( ceil( nbins ) )
+    nbins = int( round( nbins ) )
     size = float( upper - lower )/ nbins
     
     return [ lower + i * size for i in range( nbins ) ]
 
+def BubbleSort( numbers, order = 'increasing' ):
+    '''
+        Sort the input list according to order variable (default increasing).
+    '''
+    N       = len(numbers)
+    numbers = list(numbers)
+    changes = [True] * ( N - 1 )
+    while any(changes):
+        for i in range(N-1):
+            if numbers[i+1] < numbers[i]:
+                changes[i] = True
+                numbers[i], numbers[i+1] = numbers[i+1], numbers[i]
+            else:
+                changes[i] = False
+    return numbers if order == 'increasing' else numbers[::-1]
 
+def MergeSort( numbers, order = 'increasing' ):
+    '''
+        Sort the input list according to order variable (default increasing).
+    '''
+    N = len(numbers)
+    if N < 2:
+        return numbers
+        
+    a = MergeSort(numbers[:N//2])
+    b = MergeSort(numbers[N//2:])
+    if a[-1] <= b[0]:
+        S = a + b
+    else:
+        S = []
+        while len(a) and len(b):
+            S.append( b.pop(0) if a[0] > b[0] else a.pop(0) )
+        S.extend( a if len(a) else b )
 
+    return S if order == 'increasing' else S[::-1]
 
-
-
-
-
+def QuickSort( numbers, order = 'increasing' ):
+    '''
+        Sort the input list according to order variable (default increasing).
+    '''
+    if len(numbers) < 2:
+        return list(numbers)
+    
+    element = _R.Choose(numbers)
+    a = QuickSort( filter( lambda x: x <= element, numbers ) )[:-1]
+    b = QuickSort( filter( lambda x: x >  element, numbers ) )
+    S = a + [element] + b
+    return S if order == 'increasing' else S[::-1]
 
