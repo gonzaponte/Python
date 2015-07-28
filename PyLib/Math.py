@@ -8,10 +8,12 @@
 #
 from __future__ import division
 
-import math
-import operator
+from math import *
+from operator import mul as _multiplication
 
+#from RandomNumbers import MersenneTwister as _MersenneTwister
 import RandomNumbers
+from random import Random as _Random
 import Array
 
 from MathCoefs import ierf_coefficients as _ck, factorials as _factorials, double_factorials as _double_factorials
@@ -63,7 +65,7 @@ def LogGamma( x ):
         log( Gamma(x) ) where Gamma is the Euler-Gamma function.
     '''
     t    = x + 6.5
-    t   -= ( x - .5 ) * math.log( t )
+    t   -= ( x - .5 ) * log( t )
     pol  =    0.99999999999980993
     pol +=  676.52036812188510      / ( x + 0. )
     pol -= 1259.1392167224028       / ( x + 1. )
@@ -74,23 +76,23 @@ def LogGamma( x ):
     pol +=    9.9843695780195716e-6 / ( x + 6. )
     pol +=    1.5056327351493116e-7 / ( x + 7. )
     
-    return 0.9189385332046727 - t + math.log( pol )
+    return 0.9189385332046727 - t + log( pol )
 
 def Gamma( x ):
     '''
         Euler Gamma function: integral_0^inf{ t^(x-1) exp(-t) dt }
     '''
     if x < 0.5:
-        return math.pi / ( math.sin( math.pi * x ) * Gamma( 1 - x )  )
+        return pi / ( sin( pi * x ) * Gamma( 1 - x )  )
 
-    return math.exp( LogGamma( x ) )
+    return exp( LogGamma( x ) )
 
 def Beta( x, y ):
     '''
         Beta function.
     '''
     assert x >= 0 and y>=0, ValueError( 'Euler Gamma is only defined for positive numbers.' )
-    return math.exp( logGamma( x ) + logGamma( y ) - logGamma( x + y ) )
+    return exp( logGamma( x ) + logGamma( y ) - logGamma( x + y ) )
 
 def gamma( a, x, full_output = False, max_iter = 1000 ):
     '''
@@ -119,8 +121,8 @@ def _gamma_series( a, x, full_output = False, max_iter = 1000 ):
         term      *= x / ( a + n )
         summation += term
         if abs(term) < abs(summation) * 1e-10:
-            pax = summation * math.exp( - x + a * math.log(x) - log_gamma )
-            return ( pax , math.exp(log_gamma) ) if full_output else pax
+            pax = summation * exp( - x + a * log(x) - log_gamma )
+            return ( pax , exp(log_gamma) ) if full_output else pax
     raise Warning('Failed convergence in _gamma_series(a,x) with a = {0}, x = {1}'.format( a, x ) )
 
 def _cgamma_continuousfraction( a, x, full_output = False, max_iter = 1000 ):
@@ -150,8 +152,8 @@ def _cgamma_continuousfraction( a, x, full_output = False, max_iter = 1000 ):
     
     if n + 1 == max_iter:
         raise Warning('Failed convergence in _cgamma_continuousfraction(a,x) with a = {0}, x = {1}'.format( a, x ) )
-    qax = math.exp( -x + a * math.log(x) - log_gamma ) * h
-    return (qax,math.exp(log_gamma)) if full_output else qax
+    qax = exp( -x + a * log(x) - log_gamma ) * h
+    return (qax,exp(log_gamma)) if full_output else qax
 
 def Erf( x ):
     '''
@@ -169,7 +171,7 @@ def Ierf( x ):
     '''
         Inverse of the error function.
     '''
-    return sum( [ _ck[k]/(2.*k+1.) * math.pow( 0.5 * math.sqrt(math.pi) * x ,2*k+1) for k in range(len(_ck)) ] )
+    return sum( [ _ck[k]/(2.*k+1.) * pow( 0.5 * sqrt(pi) * x ,2*k+1) for k in range(len(_ck)) ] )
 
 def _PoissonCumulative( mean ):
     '''
@@ -231,7 +233,7 @@ def RK4( F, x0, y0, x1, dx = 1e-6 ):
     '''
     
     y = list()
-    N = int( math.ceil( (x1-x0)/dx ) )
+    N = int( ceil( (x1-x0)/dx ) )
     
     for i in xrange(N):
         k1  = F( x0           , y0               )
@@ -495,7 +497,7 @@ class Integrator:
         lower = self.lower if lower is None else lower
         upper = self.upper if upper is None else upper
         lims  = [(lower,upper)] if self.ndim is 1 else zip(lower,upper)
-        V = reduce( operator.mul, [ up - low for low, up in lims ] )
+        V = reduce( _multiplication, [ up - low for low, up in lims ] )
         
         error = 1 + max_error
         f, f2, N = 0., 0., 0.
@@ -507,7 +509,7 @@ class Integrator:
             fx  = self.fun( *x )
             f  += fx
             f2 += fx**2
-            error = V * math.sqrt( abs( f2 / N**2 - f**2 / N**3 ) )
+            error = V * sqrt( abs( f2 / N**2 - f**2 / N**3 ) )
         
         return V * f / N, error
 
@@ -554,7 +556,7 @@ class Fitter:
         '''
             Performs the fit solving A x = B where x are the coeficients of the pol.
         '''
-        a = [ [1.] * self.N ] + [ map( lambda x: math.pow( x, n+1 ), self.x) for n in range(degree) ]
+        a = [ [1.] * self.N ] + [ map( lambda x: pow( x, n+1 ), self.x) for n in range(degree) ]
         a = Array.Matrix(*a)
         b = Array.Vector(*self.y)
         
@@ -562,11 +564,11 @@ class Fitter:
         self.B = a ** b
         self.AI = self.A.Inverse()
         self.coefs = list(self.AI ** self.B)
-        f = lambda x: sum( [self.coefs[i]*math.pow(x,i) for i in range(degree+1)] )
-        chi2 = sum( [ math.pow( y - f(x), 2 ) for x,y in zip(self.x,self.y) ] )
-        syx = math.sqrt( chi2 / ( self.N - degree - 1 ) )
+        f = lambda x: sum( [self.coefs[i]*pow(x,i) for i in range(degree+1)] )
+        chi2 = sum( [ pow( y - f(x), 2 ) for x,y in zip(self.x,self.y) ] )
+        syx = sqrt( chi2 / ( self.N - degree - 1 ) )
         
-        self.coefs_errors = [ syx * math.sqrt( self.AI[i][i] ) for i in range(degree+1) ]
+        self.coefs_errors = [ syx * sqrt( self.AI[i][i] ) for i in range(degree+1) ]
         return zip( self.coefs, self.coefs_errors )
 
 class Optimizer:
@@ -581,7 +583,7 @@ class Optimizer:
         self.fun  = F
         self.xmin = tuple(xmin) if isinstance( xmin, (list,tuple) ) else xmin
         self.xmax = tuple(xmax) if isinstance( xmax, (list,tuple) ) else xmax
-        self.gold = ( 3 - math.sqrt(5) ) / 2 #golden ratio to perform better
+        self.gold = ( 3 - sqrt(5) ) / 2 #golden ratio to perform better
     
     def Minimize( self, x0 = None, max_size = 1e-6, xmin = None, xmax = None ):
         return self._Minimize1D( x0, max_size, xmin, xmax ) if self.ndim is 1 else self._MinimizeND( x0, None, max_size, xmin, xmax )
@@ -649,7 +651,7 @@ class Optimizer:
             x0 = x
             fx2 = self.fun( x1 )
             
-            if fx2 < fx1 and 2 * ( fx1 - 2 * fx + fx2 ) * math.sqrt( fx1 - fx - bigval ) - bigval * math.sqrt( fx1 - fx2 ):
+            if fx2 < fx1 and 2 * ( fx1 - 2 * fx + fx2 ) * sqrt( fx1 - fx - bigval ) - bigval * sqrt( fx1 - fx2 ):
                 x, v1, fx =  self._MinimizeAlongPath( x, v1, max_size )
                 v[bigdim] = Array.Vector( v[self.ndim] )
                 v[self.ndim] = Array.Vector( v1 )
@@ -678,7 +680,7 @@ class Optimizer:
         '''
             Gets a random point within the interval where the function takes a smaller value than the limits to start iteration.
         '''
-        R = random.Random()
+        R = _Random()
         limit = min( self.fun(a), self.fun(c) )
         while True:
             point = random.uniform( a, c )
