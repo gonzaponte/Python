@@ -20,7 +20,7 @@ def SlowFFT1( data ):
     N = len(data)
     twopiN = -2. * math.pi / N
     W      = complex( math.cos( twopiN ), math.sin( twopiN ) )
-    return list( Array.Matrix( [ [ W**(n*k) for k in range(N)] for n in range(N) ] ) ** Array.Vector(data) )
+    return list( Array.Matrix( *[ [ W**(n*k) for k in range(N)] for n in range(N) ] ) ** Array.Vector(*data) )
 
 def FFT1( data ):
     N = len( data )
@@ -45,22 +45,22 @@ def VFFT1( data, Nmin = 32 ):
     twopiN = -2. * math.pi / Nmin
     W      = complex( math.cos( twopiN ), math.sin( twopiN ) )
     
-    M      = Array.Matrix( [ [ W**(n*k) for k in range(Nmin)] for n in range(Nmin) ] )
-    X      = Array.Matrix( [ data[i:i+Left] for i in range(0,N,Left) ] )
+    M      = Array.Matrix( *[ [ W**(n*k) for k in range(Nmin)] for n in range(Nmin) ] )
+    X      = Array.Matrix( *[ data[i:i+Left] for i in range(0,N,Left) ] )
     F      = M ** X
     F      = F.T()
     twopiN = -1. * math.pi / Nmin
     W      = complex( math.cos( twopiN ), math.sin( twopiN ) )
-    Wk     = Array.Vector( [W**k for k in range(Nmin) ] )
+    Wk     = Array.Vector( *[W**k for k in range(Nmin) ] )
     fdata  = list(F[0] + Wk * F[1]) + list(F[0] - Wk * F[1])
     
     return fdata
 
 def FFT2( data ):
-    fdata = Array.Matrix(data)
+    fdata = Array.Matrix(*data)
     for N in fdata.Size():
         for i in range(N):
-            fdata[i] = Array.Vector( FFT1( fdata[i] ) )
+            fdata[i] = Array.Vector( *FFT1( fdata[i] ) )
         fdata = fdata.T()
 
     return fdata.ToList()
@@ -72,7 +72,7 @@ def Shift1( data ):
 def Shift2( data ):
     newdata = copy.deepcopy(data)
     for i in range(2):
-        newdata = Array.Matrix( map( Shift1, newdata ) ).T().ToList()
+        newdata = Array.Matrix( *map( Shift1, newdata ) ).T().ToList()
     return newdata
 
 def plot(data):
@@ -93,22 +93,32 @@ def plot2(data):
     c.Update()
     return c,g
 
+def Plot(*args):
+    graphs = [ Plots.Graph( range(len(data)), data, markerstyle = 20, markersize = 1 ) for data in args ]
+    c = Plots.PutInCanvas( graphs, ['AP']*4 )
+    return c, graphs
+
+from math import exp
 if __name__ == '__main__':
-    '''
+    
     data = [ 1. if i==32 else 0. for i in range(64) ]
     data = [ math.exp(-i**2/200.) for i in range(-32,32) ]
+    data = [ math.cos( 0.01*i ) + math.sin( 0.03 * i ) for i in range(1024) ]
+    data = [ exp( -(-2.5 + 0.01*i)**2/4 ) for i in range(512) ]
     fdata = map(abs,FFT1(data))
     sdata = map(abs,SlowFFT1(data))
     vdata = map(abs,VFFT1(data))
-    a = plot(data)
-    b = plot(Shift1(fdata))
-    c = plot(Shift1(sdata))
-    d = plot(Shift1(vdata))
+    #a = plot(data)
+    #b = plot(Shift1(fdata))
+    #c = plot(Shift1(sdata))
+    #d = plot(Shift1(vdata))
+    a = Plot(data,Shift1(fdata),Shift1(sdata),Shift1(vdata))
+    
     '''
-
     data2 = [[1. if i == j == 32 else 0. for j in range(64)] for i in range(64) ]
     data2 = [[ math.exp(-(x**2+y**2)/2.) for y in range(-32,32)] for x in range(-32,32)]
 #    data2[
     fdata2 = map(lambda x:map(abs,x),FFT2(data2))
     e     = plot2(data2)
     f     = plot2(Shift2(fdata2))
+    '''
