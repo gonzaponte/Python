@@ -241,6 +241,9 @@ class Vector:
         self.values = _deepcopy(Zeros(self.length))
 
     def Copy( self ):
+        '''
+            Return a copy of the instance.
+        '''
         return self.__class__( *self.values )
 
     def ToList( self ):
@@ -269,7 +272,8 @@ class Vector:
         element = self[index]
         del self[index]
         return element
-            
+
+    
 
 class Matrix( Vector ):
     
@@ -284,16 +288,6 @@ class Matrix( Vector ):
             - Diagonalization is performed with the Diagonalize method.
             ...
         '''
-#        if len(values) is 1:
-#            if isinstance( values[0], Matrix ):
-#                data = _deepcopy( values[0].values )
-#            elif isinstance( values[0], (list,tuple) ):
-#                data = list(_deepcopy( values[0] ))
-#            else:
-#                data = list(values)
-#        else:
-#            data = list(values)
-
         self.values = Vector( *[Vector(*v) for v in values ])
         self.rows   = len( self.values    ) if self.values else 0
         self.cols   = len( self.values[0] ) if self.values else 0
@@ -409,7 +403,7 @@ class Matrix( Vector ):
 
     def Clear( self ):
         '''
-            Sets all the coordinates to 0.
+            Sets all the values to 0.
         '''
         map( Vector.Clear, self.values )
     
@@ -551,16 +545,14 @@ class Matrix( Vector ):
         
         if rows:
             for i in reversed(range(self.rows)):
-                if i in rows:
-                    continue
-                del M[i]
+                if not i in rows:
+                    del M[i]
         M = M.T()
         
         if cols:
             for i in reversed(range(self.cols)):
-                if i in cols:
-                    continue
-                del M[i]
+                if not i in cols:
+                    del M[i]
         M = M.T()
         
         return M
@@ -574,6 +566,21 @@ class Matrix( Vector ):
         sub = sub.T()
         del sub[col]
         return sub.T()
+#    
+#    def SwapRows( self, i, j ):
+#        '''
+#            Swap i-th and j-th rows.
+#        '''
+#        if j<i: i, j = j, i
+#        self.Insert( i, self.Pop(j) )
+#
+#    def SwapCols( self, i, j ):
+#        '''
+#            Swap i-th and j-th rows.
+#        '''
+#        if j<i: i, j = j, i
+#        self = self.T().Insert( i, self.Pop(j) )
+#        self = self.T()
 
     def Minor( self, row, col ):
         '''
@@ -713,10 +720,16 @@ class Matrix( Vector ):
         return Q.T(), R
 
     def _LUInverse(self):
+        '''
+            Invert matrix using LU decomposition.
+        '''
         L, U, P = self.LU()
         return U.Inverse('GJ') ** L.Inverse('GJ') ** P
 
     def _LUDeterminant(self):
+        '''
+            Compute determinant using LU decomposition.
+        '''
         L, U, P = self.LU()
         return reduce( _multiplication, U.Diag() ) / P.Det('Adj')
 
@@ -829,6 +842,13 @@ def Identity( rows ):
         Rows x rows identity matrix.
     '''
     return Matrix( *[ [ 1. if j==i else 0. for j in range(rows) ] for i in range(rows) ])
+
+def Diagonal( items ):
+    '''
+        Creates a diagonal matrix with elements in items.
+    '''
+    n = len(items)
+    return Matrix( *[ [ items[i] if j==i else 0. for j in range(n) ] for i in range(n) ])
 
 # examples and debug
 if __name__ == '__main__':
