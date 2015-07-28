@@ -26,8 +26,9 @@ fint = lambda x: int( math.floor( x ) )
 cint = lambda x: int( math. ceil( x ) )
 
 def Wait( message = 'Waiting...' ):
-    ''' Prints a message and waits for a input.'''
-
+    '''
+        Prints a message and waits for a input.
+    '''
     raw_input( message )
 
 def GetVarName( var, exception = None ):
