@@ -3,37 +3,38 @@
 '''
 
 def Enumerator( N0 ):
-    N = N0 - 1
+    N = N0
     while True:
-        N += 1
         yield N
+        N += 1
 
-def A( N, k, p ):
-    return pow( 16, N-k, 8 * k + p ) / float( 8 * k + p )
+def A( N, k, a ):
+    return pow( 16, N-k, 8 * k + a ) / float( 8. * k + a )
 
-def B( N, k, p ):
-    return pow( 16, N-k ) / float( 8 * k + p )
+def B( N, k, a ):
+    return pow( 16, N-k ) / float( 8. * k + a )
 
-def Asum( N, p ):
-    return sum( [ A( N, k, p ) for k in xrange(N) ] )
+def Asum( N, a ):
+    return sum( A( N, k, a ) for k in xrange(N-1,-1,-1) )
 
-def Bsum( N, p ):
-    Sum = 0.
-    for k in Enumerator(N):
-        new  = B( N, k, p )
-        Sum += new
-        if not new:
-            return Sum
+def Bsum( N, a, p = 16 ):
+    p += 10
+    return sum( B( N, k, a ) for k in xrange(N+p,N-1,-1) )
+#    Sum = 0.
+#    for k in Enumerator(N):
+#        new  = B( N, k, p )
+#        Sum += new
+#        if not new:
+#            return Sum
 
-def ABsum( N, p ):
-    return Asum( N, p ) + Bsum( N, p )
+def ABsum( N, a, p = 16 ):
+    return Asum( N, a ) + Bsum( N, a, p )
 
 def Nthpi( N ):
-    return ( 4 * ABsum( N, 1 ) - 2 * ABsum( N, 4 ) - ABsum( N, 5 ) - ABsum( N, 6 ) ) % 1.0
+    return str( int( str( int( 4 * ABsum( N, 1 ) - 2 * ABsum( N, 4 ) - ABsum( N, 5 ) - ABsum( N, 6 ) ) ), 16 ) )
 
-def pi( T = 10 ):
-    return ' '.join( map( str, map( Nthpi, range(10) ) ) )
-
+def pi( N = 100 ):
+    return ''.join( map( Nthpi, range(N) ) )
 
 print pi()
 
