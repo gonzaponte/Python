@@ -57,15 +57,46 @@ def NOT( b1 ):
     '''
     return ''.join( map( Bit, map( operator.not_, map( Bool, b1 ) ) ) )
 
+def NAND( b1, b2 ):
+    '''
+        Inverse and operation, i.e., for each bit position: 0 if both bits are 1, 1 otherwise.
+        '''
+    b1, b2 = MakeCompatible( b1, b2 )
+    return NOT( AND(b1,b2) )
 
-a = '001010'
-b = '011010'
-print 'a   = ', a
-print 'b   = ', b
-print 'and = ', AND(a,b)
-print 'or  = ', OR(a,b)
-print 'xor = ', XOR(a,b)
-print 'not = ', NOT( a )
-print int(a)
-print hex(int(a))
+def NOR( b1, b2 ):
+    '''
+        Inverse or operation, i.e., for each bit position: 1 if both bits are 0, 0 otherwise.
+        '''
+    b1, b2 = MakeCompatible( b1, b2 )
+    return NOT( OR(b1,b2) )
+
+def NXOR( b1, b2 ):
+    '''
+        Inverse xor operation, i.e., for each bit position: 1 if both bits are the same, 0 otherwise.
+        '''
+    b1, b2 = MakeCompatible( b1, b2 )
+    return NOT( XOR( b1, b2 ) )
+
+def bin( x ):
+    '''
+        Conversion from positive integer to binary.
+    '''
+    return bin(x)[2:]
+
+
+if __name__ == '__main__':
+    from RandomNumbers import MersenneTwister as MT
+    R = MT()
+    a = ''.join( R.Choose(['0','1']) for i in range( R.Integer(0,20) ) )
+    b = ''.join( R.Choose(['0','1']) for i in range( R.Integer(0,20) ) )
+    print 'a raw   = ', a
+    print 'b raw   = ', b
+    a, b = MakeCompatible( a, b )
+    print 'a       = ', a
+    print 'b       = ', b
+    print 'and     = ', AND(a,b)
+    print 'or      = ', OR(a,b)
+    print 'xor     = ', XOR(a,b)
+    print 'not     = ', NOT( a )
 
