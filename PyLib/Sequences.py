@@ -222,7 +222,7 @@ def Cumulative( L ):
 
 def Frequencies( Input ):
     ''' This function takes a list and returns a dictionary with the frecuency of each element.'''
-    return { element: l.count(element) for element in set(Input) }
+    return { element: Input.count(element) for element in set(Input) }
 
 def Binning( nbins = 100, lower = 0., upper = 1.):
     ''' Generalization of range: returns a inverval sliced in several partitions (bins). The return is a list which values are the beginning of each bin. The arguments are the number of bins and the minimum and the maximum of the interval.'''
