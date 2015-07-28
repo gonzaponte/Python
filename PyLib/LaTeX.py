@@ -44,14 +44,21 @@ def SetError( x, sx, exponent = 'auto' ):
 
 def MakeFigures( figures, format = '.pdf', folder = './', properties = '' ):
     return '\n'.join( map( lambda figure: r'''
-\begin{figure}
+\begin{figure}[H!]
 \centering
 \includegraphics[''' + properties + r''']{''' +  folder + figure + format + r'''}
-\end{figure}''', figures ) )
+\end{figure}
+\clearpage''', figures ) )
 
 def MakeLaTeX( text, file, append = False ):
-    f = file.open( file, 'w' ) if not append else file.open( file, 'a' )
+    f = open( file, 'a' if append else 'w' )
+    f.write( r'''\input{/Users/Gonzalo/github/LaTeX/Plantilla.tex}
+\begin{document}
+''')
     f.write( text )
+    f.write(r'''
+\end{document}
+''')
     f.close()
     os.system( 'pdflatex ' + file )
     os.system( 'open '     + file )
