@@ -296,7 +296,7 @@ def MakeH1( data, title = 'histo', nbins = 100 ):
     
     return histo
     
-def PutInCanvas( objects, Options = None, nhorizontal = None, nvertical = None ):
+def PutInCanvas( objects, Options = None, nhorizontal = None, nvertical = None, canvassize= None ):
     '''
         Draw each object in a subcanvas.
     '''
@@ -306,7 +306,7 @@ def PutInCanvas( objects, Options = None, nhorizontal = None, nvertical = None )
     if Options is None:
         Options = [''] * len( objects )
     
-    c = ROOT.TCanvas()
+    c = ROOT.TCanvas() if canvassize is None else ROOT.TCanvas('canvas','',canvassize[0],canvassize[1])
     c.Divide( nhorizontal, nvertical )
 
     for i in range(len(objects)):
