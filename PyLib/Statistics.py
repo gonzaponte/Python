@@ -82,7 +82,9 @@ def CovarianceMatrix( *args, **kwargs ):
     weights = kwargs.get('weights')
     N   = len( args )
     CVM = Array.Zeros( N, N )
-    means = kwargs.get('means',[ Mean(x,weights) for x in args ])
+    means = kwargs.get('means')
+    if not means: means = [ Mean(x,weights) for x in args ]
+    
     for i in range(N):
         x = args[i]
         for j in range(i,N):
@@ -164,7 +166,7 @@ def Median( data ):
     '''
     
     if isinstance( data, list ):
-        return sorted( data ) [ len( data ) / 2 ] if len( data ) % 2 else Mean( sorted( data ) [ len( data ) / 2 - 1 : len( data ) / 2 + 1] )
+        return sorted( data ) [ len( data ) // 2 ] if len( data ) % 2 else Mean( sorted( data ) [ len( data ) // 2 - 1 : len( data ) // 2 + 1] )
     elif isinstance( data, dict ):
         x, y = zip( *sorted( data.items() ) )
         cum  = Sequences.Cumulative( y )
@@ -197,6 +199,18 @@ def Chi2( exp, sexp, th ):
         Calculates the Chi2 for a given set of data exp compared with its expected value th and uncertaintities sexp.
     '''
     return sum( map( lambda x,y,z: ( ( x - y ) / z )**2, exp, th, sexp ) )
+
+def ShannonEntropy( labels ):
+    '''
+        Compute Shannon entropy.
+    '''
+    if not labels: return 0.
+    inv_n = 1.0 / len(labels)
+    entr = 0.
+    for label in set(labels):
+        p = labels.count(label) * inv_n
+        entr -= p * math.log(p,2)
+    return entr
 
 class Distribution:
     '''
