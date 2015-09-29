@@ -12,6 +12,7 @@ import time
 import Math
 import math
 import Array
+#from Statistics import Mean
 
 class RandomNumberGenerator:
     '''
@@ -20,7 +21,7 @@ class RandomNumberGenerator:
     def __init__( self, seed = None ):
         self.seed = self.DefaultSeed() if seed is None else seed
         self._poisson_pdf  = lambda k,mean: math.pow( mean, k ) * math.exp( - mean ) / Math.Factorial( k )
-        self._poisson_cdf  = lambda x,mean: Math.IncompleteGamma( int( x + 1 ), mean ) / Math.Factorial( int(x) )
+        self._poisson_cdf  = lambda x,mean: Math.gamma( int( x + 1 ), mean ) / Math.Factorial( int(x) )
     
     def DefaultSeed( self ):
         '''
@@ -120,7 +121,7 @@ class RandomNumberGenerator:
         '''
             Sample the given function in the interval [x0,x1) using Metropolis MC.
         '''
-        return _Metropolis( pdf, x0, x1, self )
+        return _Metropolis( pdf, x0, x1, None, self )
 
 class LCG(RandomNumberGenerator):
     '''
@@ -397,29 +398,37 @@ class _Metropolis:
     '''
         Class for general function sampling.
     '''
-    def __init__( self, pdf, x0 = 0., x1 = 1., Random = MersenneTwister() ):
+    def __init__( self, pdf, x0 = 0., x1 = 1., sigma = None, Random = MersenneTwister() ):
         '''
             Initialize with some function pdf and an interval [x0,x1).
             '''
         self.pdf = pdf
-        self.low  = x0
-        self.upp  = x1
-        self.x0   = 0.5 * ( x1 - x0 )
+        self.low = x0
+        self.upp = x1
+        self.x0  = 0.5 * ( x1 - x0 )
+        self.x1  = self.x0
+        self.fx1 = self.pdf(self.x1)
+        x = [ self.low + 0.02 * (i+0.5) * self.x0 for i in range(100) ]
+        y = map( self.pdf, x )
+        self.sig = 0.1 * sum(map(lambda a,b:a*b,x,y))/sum(y)  if sigma is None else sigma
+        print self.sig
         self.rng = Random
     
     def __call__( self ):
         '''
             Get a sample.
         '''
-        fx0 = self.pdf( self.x0 )
-        x1  = self.rng.Uniform( self.low, self.upp ) # next trial point
-        fx1 = self.pdf( x1 )
-        ratio = fx1 / fx0
+        x2 = self.low - 1
+        while not (self.low <= x2 <= self.upp):
+            x2 = self.rng.Gauss( self.x1, self.sig ) 
+        fx2 = self.pdf( x2 )
+        ratio = fx2 / self.fx1
         
         if ratio >= 1 or self.rng.Get() <= ratio: ### Faster if the first part of the conditional is true since
-            self.x0 = x1                          ### it is not neccesary to compute another random number.
+            self.x1  = x2                         ### it is not neccesary to compute another random number.
+            self.fx1 = fx2 
         
-        return self.x0
+        return self.x1
 
 class _CorrelatedRandomNumbers:
     '''
@@ -466,7 +475,7 @@ if __name__ == '__main__':
     hmet.SetMinimum(0); hmet.SetLineColor(2); hmet.SetLineWidth(2)
     
     for i in range(int(1e5)):
-        hlcg.Fill( lcg.Poisson(6) )
+#        hlcg.Fill( lcg.Poisson(3) )
         hmcg.Fill( mcg.Binomial(10,0.8) )
         hmtg.Fill( mtg.Triangular(0.,1.,0.2) )
         hpmg.Fill( pmg.Gauss(0.,1.) )
