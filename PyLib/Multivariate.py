@@ -17,7 +17,7 @@ class Efficiency:
         self.nsig = len( self.sig ) * 1.0
         self.nbkg = len( self.bkg ) * 1.0
         self._f = (lambda c: (lambda x: x > c) ) if Median( signal ) > Median( background ) else (lambda c: ( lambda x: x < c) )
-    
+
     def MakePlots( self, granularity = 1., varname = 'x' ):
         roc  = TGraph(); roc .SetLineWidth(2); roc .SetLineColor(kBlack)
         seff = TGraph(); seff.SetLineWidth(2); seff.SetLineColor(kGreen)
@@ -37,21 +37,21 @@ class Efficiency:
             beff.SetPoint( i, cut, pbkg )
             sgf1.SetPoint( i, cut, nsig / ( nsig + nbkg )**0.5 if nsig else 0. )
             sgf2.SetPoint( i, cut, nsig /  nbkg**0.5 if nbkg else 0. )
-        
+
         mgr  = TMultiGraph()
         seff.SetTitle('Signal efficiency')
         beff.SetTitle('Background efficiency')
         mgr.Add( seff )
         mgr.Add( beff )
-        
+
         roc.GetXaxis().SetTitle('Signal efficiency')
         roc.GetYaxis().SetTitle('Background rejection')
-        
+
         cvs  = TCanvas(); cvs.Divide(2,2)
         for i,g in enumerate([roc,mgr,sgf1,sgf2]):
             cvs.cd(i+1)
             g.Draw('AC')
-        
+
         mgr.GetXaxis().SetTitle( varname )
         cvs.cd(2).BuildLegend()
         cvs.Update()
@@ -71,7 +71,7 @@ class Dataset:
         self.empty    = False if self.data and self.data[0] else True
         if not self.empty and compute_statistics:
             self.Analyze()
-        
+
     def Analyze( self ):
         self.mean     = Vector( *map( Mean, self.vars, self.weights ) ) if self.weights else Vector( *map( Mean, self.vars ) )
         self.cvm      = CovarianceMatrix ( *self.vars, means = self.mean, weights = self.weights )
@@ -85,14 +85,14 @@ class Dataset:
 
     def __iter__( self ):
         return iter( self.data )
-    
+
     def Copy( self ):
         return Dataset( self.data, self.weights )
-    
+
     def _ComputePredictor( self, indices ):
         remaining = [ i for i in range(self.ndim) if not i in indices ]
         new = self.cvm.Copy()
-        
+
         current = 0
         for i in indices:
             new.Insert(current, new.Pop(i))
@@ -105,7 +105,7 @@ class Dataset:
         xmean = self.mean[remaining]
         ymean = self.mean[indices]
         self._predictor = lambda x: ymean + cxy ** cxx ** ( x - xmean )
-    
+
     def Predict( self, x, vars = (-1,) ):
         '''
             Get the best estimation of the variables with indices vars from the dataset.
@@ -115,21 +115,21 @@ class Dataset:
             self._ComputePredictor( vars )
 
         return self._predictor( Vector(*x) )
-    
+
     def Eigenvalues( self ):
         '''
             Get eigenvalues.
         '''
         if not self._eigenvalues: self._ComputeEigenvalues()
         return self._eigenvalues
-    
+
     def Eigenvectors( self ):
         '''
             Get eigenvectors.
         '''
         if not self._eigenvectors: self._ComputeEigenvalues()
         return self._eigenvectors
-    
+
     def _ComputeEigenvalues( self ):
         '''
             Compute eigenvalues and eigenvectors.
@@ -256,10 +256,10 @@ class kNN:
         self.mins   = map( min, ds.vars )
         self.ranges = [ float( max(ds.vars[i]) - self.mins[i] ) for i in range(self.ds.ndim) ]
         return Dataset( map( self._NormalizeEvent, ds ), compute_statistics = False )
-    
+
     def _NormalizeEvent( self, evt ):
         return tuple( (evt[i] - self.mins[i]) / self.ranges[i] for i in range(self.ds.ndim) )
-    
+
     def _Ndistance( self, u, v ):
         return sqrt( sum( (i-j)**2 for i,j in zip(u,v) ) )
 
@@ -285,7 +285,7 @@ class kNN:
             graphs.append( Graph( x, y, '', '', str(t) ) )
             graphs[-1].SetMarkerStyle( 21 + i )
             graphs[-1].SetMarkerColor( colors[i] )
-        
+
         canvas = TCanvas()
         graphs[0].Draw('ap')
         for i in graphs[1:]: i.Draw('psame')
@@ -343,55 +343,90 @@ class Fisher:
         self.effplots = Efficiency( self.sig_values, self.bkg_values )
         self.effplots.MakePlots(0.01)
 
-class DecissionTree:
-    def __init__( self, data, labels, properties = None ):
-        self.data   = data
-        self.labels = labels
-        self.ndim   = len(data[0])
-        self.prop   = properties if properties else map( str, range(self.ndim) )
+class DiscreteDecissionTree:
+    '''
+        Create a decission tree with discrete input data. Arguments:
+        - data: list where each entry is a vector with the features values.
+        - classes: class of each event in data
+        - features: column names
+    '''
+    def __init__( self, data, classes, features = None ):
+        if len(set(classes)) is 1:
+            raise RuntimeError('The data must have different classes. There is possible classification')
+
+        self.data     = data
+        self.classes  = classes
+        self.ndim     = len(data[0])
+        self.features = features if features else map( str, range(self.ndim) )
         self._BuildTree()
-    
-    def _Train( self ):
-        data   = self.data
-        labels = self.labels
-        self.cuts = []
-        while len(set(labels)) != 1 and len(data[0]):
-            f = self._choose_feature( data, labels )
-            data, labels = self._split_by_feature( data, labels, f, )
+
+        ### For classification purposes
+        self._name2index = dict( i[::-1] for i in enumerate(self.features) )
+
+
+    def Classify( self, input_data ):
+        '''
+            Classify an event.
+        '''
+        out  = self.tree
+        while isinstance(out,dict):
+            feature = out.keys()[0][0]
+            index   = input_data[ self._name2index[ feature ] ]
+            value   = input_data[index]
+            out     = out[ feature, value ]
+        return out
 
     def _BuildTree( self ):
-        self.tree = self._BuildBranch( self.data, self.labels )
-    
-    def _BuildBranch( self, data, labels ):
-        feature = self._ChooseFeature( data, labels )
+        '''
+            Create a tree starting from input data.
+        '''
+        self.tree = self._BuildBranch( self.data, self.classes, self.features )
+
+    def _BuildBranch( self, data, classes, features ):
+        '''
+            Build a branch choosing the best feature to split on and iterate for
+            each branch while there is at least one feature to split on and there
+            are more than one possible class.
+        '''
+        feature_index = self._ChooseFeature( data, classes )
+        features = list(features)
+        feature = features.pop(feature_index)
+
         tree = {}
-        property = self.prop.pop(feature)
-        for value in set( zip(*data)[feature] ):
-            subdata, sublabels = self._SplitByFeature( data, labels, feature, value )
-            key = (property,value)
-            if len(set(sublabels)) is 1:
-                tree[ key ] = sublabels[0]
-            elif len(subdata[0]) is 1:
-                tree[ key ] = sorted( (labels.count(subvalue),subvalue) for subvalue in set(sublabels) )[-1][1]
+        for value in set( zip(*data)[feature_index] ):
+            subdata, subclasses = self._SplitByFeature( data, classes, feature_index, value )
+            key = (feature,value)
+            if len(set(subclasses)) is 1:
+                tree[ key ] = subclasses[0]
+            elif not len(subdata[0]):
+                tree[ key ] = sorted( (classes.count(subvalue),subvalue) for subvalue in set(subclasses) )[-1][1]
             else:
-                tree[ key ] = self._BuildBranch( subdata, sublabels )
+                tree[ key ] = self._BuildBranch( subdata, subclasses, features )
         return tree
 
-    def _SplitByFeature( self, data, labels, feature, value ):
+    def _SplitByFeature( self, data, classes, feature, value ):
+        '''
+            Split dataset and return those lines with the feature equal to
+            value. The output does not contain the input feature anymore.
+        '''
         pop = lambda x: x[:feature] + x[feature+1:]
-        out = [ (pop(dt),lb) for dt, lb in zip(data,labels) if dt[feature] == value ]
+        out = [ (pop(row),lb) for row, lb in zip(data,classes) if row[feature] == value ]
         return zip( *out ) if out else ([], [])
 
-    def _ChooseFeature( self, data, labels ):
-        inv_n    = 1.0 / len(labels)
-        entropy0 = ShannonEntropy(labels)
-        
+    def _ChooseFeature( self, data, classes ):
+        '''
+            Choose the best feature to split based on the information gain
+            computed throw Shannon entropy.
+        '''
+        inv_n    = 1.0 / len(classes)
+        entropy0 = ShannonEntropy(classes)
+
         zipped_data = zip(*data)
         gains  = []
-        for feature in range( self.ndim ):
+        for feature in range( len(data[0]) ):
             entropy = 0.
             for split_value in set( zipped_data[feature] ):
-                subds, sublb = self._SplitByFeature( data, labels, feature, split_value )
+                subds, sublb = self._SplitByFeature( data, classes, feature, split_value )
                 p = len(sublb) * inv_n
                 entropy += p * ShannonEntropy(sublb)
             gains.append( entropy0 - entropy )
@@ -424,7 +459,7 @@ if __name__ == '__main__':
     F.Apply( sig_apply, bkg_apply )
     F.Plot()
     '''
-    
+
     N = 1000
     x = [ R.Gaus(1,.7) for i in range(N) ] + [ R.Gaus(-1,.7) for i in range(N) ] + [ R.Gaus(-1,.7) for i in range(N) ] + [ R.Gaus(+1,.7) for i in range(N) ]
     y = [ R.Gaus(1,.7) for i in range(N) ] + [ R.Gaus(-1,.7) for i in range(N) ] + [ R.Gaus(+1,.7) for i in range(N) ] + [ R.Gaus(-1,.7) for i in range(N) ]
