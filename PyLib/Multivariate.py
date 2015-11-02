@@ -1,4 +1,4 @@
-from Array import Vector, Matrix
+from Array import Vector, Matrix, Identity
 from copy import deepcopy
 from Statistics import *
 from ROOT import *
@@ -360,7 +360,7 @@ class DiscreteDecissionTree:
         self.features = features if features else map( str, range(self.ndim) )
         self._BuildTree()
 
-        ### For classification purposes
+        ### For classification purposes
         self._name2index = dict( i[::-1] for i in enumerate(self.features) )
 
 
@@ -432,6 +432,78 @@ class DiscreteDecissionTree:
             gains.append( entropy0 - entropy )
 
         return gains.index( max(gains) )
+
+class NaiveBayes:
+    '''
+        Implementation of the naive Bayes classifier.
+    '''
+    def __init__( self, data, classes ):
+        if len(set(classes)) is 1:
+            raise RuntimeError('The data must have different classes. There is possible classification')
+
+        self.data     = data
+        self.classes  = classes
+        self.ndim     = len(data[0])
+        self._Train()
+
+    def Classify( self, input_data ):
+        '''
+            Classify input data by finding most likely class.
+        '''
+        probs = { cls : Vector(*input_data) ** prob + self.class_probabilities[cls] for cls,prob in self.feature_probabilities.items() }
+        print probs
+        return sorted( item[::-1] for item in probs.items() )[-1][1]
+
+    def _Train(self):
+        '''
+            Compute p(c_i) and p(f_i) where c_i are the possible classes and
+            f_i are the data features.
+        '''
+        lognofsamples = log(len(self.classes))
+
+        self.class_probabilities   = { cls : log(self.classes.count(cls)) - lognofsamples for cls in set(self.classes) }
+        self.feature_probabilities = { cls : Vector.Apply(reduce( Vector.__add__, data ) + 1,log) - (log(sum( map( sum, data ) ) + 2)) for cls, data in self._SplitClasses() }
+
+    def _SplitClasses(self):
+        '''
+            Split data into classes yielding one at a time.
+        '''
+        for cls in set(self.classes):
+            yield cls, [ Vector(*pair[0]) for pair in filter( lambda x: x[1] == cls, zip(self.data,self.classes) ) ]
+
+class LinearRegresion:
+    '''
+        Class to perform linear regression of the form y = f(x0,x1,x2,...).
+        Locally
+    '''
+    def __init__( self, x_data, y_data, kernel = None, threshold = 0. ):
+        self.ndim     = len(x_data[0])
+        self.ndata    = len(y_data)
+        self.x_matrix = Matrix(*[[i] for i in x_data]) if self.ndim is 1 else Matrix(*x_data)
+        self.y_vector = Vector(*y_data)
+        self.kernel   = kernel
+        self.threshold = threshold
+        if kernel is None:
+            self._Train()
+
+    def _Train(self):
+        self.w_vector = (self.x_matrix.T()**self.x_matrix).Inverse() ** self.x_matrix.T() ** self.y_vector
+
+    def _ComputeWeights(self,x):
+        w_matrix = Identity(self.ndata)
+        for i in range(self.ndata):
+            value = self.kernel(x,self.x_matrix[i])
+            w_matrix[i][i] = value if value > self.threshold else 0.0
+        self.w_vector = (self.x_matrix.T()**w_matrix**self.x_matrix).Inverse() ** self.x_matrix.T() ** w_matrix ** self.y_vector
+
+    def GetValue( self, x ):
+        x = Vector(*x)
+        if not self.kernel is None:
+            self._ComputeWeights(x)
+        return self.w_vector ** x
+
+
+
 
 
 if __name__ == '__main__':
