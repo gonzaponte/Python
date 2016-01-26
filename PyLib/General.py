@@ -73,5 +73,13 @@ def PrintVars( *Vars ):
     for v in Vars:
         print GetVarName(v) + ' = ' + str(v)
 
+def TimeIt( f ):
+    def timmed(*args,**kwargs):
+        t0 = time.time()
+        output = f(*args,**kwargs)
+        print 'Time spent in {0}: {1}'.format( f.__name__, time.time() - t0 )
+        return output
+    return timmed
+
 
 
