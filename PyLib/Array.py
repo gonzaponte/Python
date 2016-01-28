@@ -299,7 +299,7 @@ class Matrix( Vector ):
         if isinstance( other, self.__class__ ):
             return self.__class__( *[ [ row ** col for col in other.T().values ] for row in self.values ] )
         elif isinstance( other, Vector ):
-            return Vector( *[ row ** other for row in self.values ] )
+            return other.__class__( *[ row ** other for row in self.values ] )
     
     def __contains__( self, x ):
         '''
