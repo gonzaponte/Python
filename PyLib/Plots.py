@@ -11,8 +11,11 @@ import os
 import ROOT
 import array
 import Sequences
-import PIL.Image
-import images2gif
+try:
+    import PIL.Image
+    import images2gif
+except:
+    print 'Modules PIL and images2gif not found'
 
 
 _colors = [   4,   2,   1,  53,   8,
