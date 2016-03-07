@@ -1,5 +1,5 @@
 #
-# Module that contains useful mathematical functions
+# Module containing useful mathematical functions
 # Note: include 2D/3D numerical integration and LU methods for solving and for matrix inversion.
 #
 # Author: Gonzalo Martinez
@@ -43,7 +43,7 @@ def DoubleFactorial( N ):
 def BinomialCoefficient( N, k ):
     '''
         Binomial coefficient.
-        '''
+    '''
     if k > N:
         raise ValueError('k must not be greater than N')
     return Factorial(N) / ( Factorial( N - k ) * Factorial(k) )
@@ -75,7 +75,7 @@ def LogGamma( x ):
     pol -=    0.13857109526572012   / ( x + 5. )
     pol +=    9.9843695780195716e-6 / ( x + 6. )
     pol +=    1.5056327351493116e-7 / ( x + 7. )
-    
+
     return 0.9189385332046727 - t + log( pol )
 
 def Gamma( x ):
@@ -89,21 +89,24 @@ def Gamma( x ):
 
 def Beta( x, y ):
     '''
-        Beta function.
+        Beta function, i.e. Gamma(x)Gamma(y)/Gamma(x+y).
     '''
     assert x >= 0 and y>=0, ValueError( 'Euler Gamma is only defined for positive numbers.' )
     return exp( logGamma( x ) + logGamma( y ) - logGamma( x + y ) )
 
 def gamma( a, x, full_output = False, max_iter = 1000 ):
     '''
-        Compute the value of the incomplete euler gamma: P(a,x) = gamma(a,x)/Gamma(a) where gamma(a,x) = int_0^x[ exp(-t) t^(a-1) dt ]. Use full_output to get also Gamma(a).
-        '''
+        Incomplete euler gamma: P(a,x) = gamma(a,x)/Gamma(a)
+        where gamma(a,x) = int_0^x[ exp(-t) t^(a-1) dt ].
+        Use full_output to get also Gamma(a).
+    '''
     assert x>= 0 and a >= 0, ValueError('Invalid arguments in gamma: a = {0}, x = {1}'.format(a,x) )
     return _gamma_series(a,x,full_output,max_iter) if x < a + 1 else 1. - _cgamma_continuousfraction(a,x,full_output,max_iter)
 
 def cgamma( a, x, full_output = False, max_iter = 1000 ):
     '''
-        Compute the value of the complementary incomplete euler gamma: Q(a,x) = 1 - P(a,x). Use full_output to get also Gamma(a).
+        Complementary incomplete euler gamma: Q(a,x) = 1 - P(a,x).
+        Use full_output to get also Gamma(a).
     '''
     assert x>= 0 and a >= 0, ValueError('Invalid arguments in cgamma: a = {0}, x = {1}'.format(a,x) )
     return 1. - _gamma_series(a,x,full_output,max_iter) if x < a + 1 else _cgamma_continuousfraction(a,x,full_output, max_iter )
@@ -114,7 +117,7 @@ def _gamma_series( a, x, full_output = False, max_iter = 1000 ):
     '''
     if x == 0:
         return (0.,0.) if full_output else 0.
-    
+
     log_gamma = LogGamma(a)
     term = summation = 1. / a
     for n in xrange(1,max_iter):
@@ -143,13 +146,13 @@ def _cgamma_continuousfraction( a, x, full_output = False, max_iter = 1000 ):
         c = b + an / c
         if abs(c) < mindouble:
             c = mindouble
-        
+
         d **= -1.
         ddd = d * c
         h *= ddd
         if abs(ddd-1) < 1e-10:
             break
-    
+
     if n + 1 == max_iter:
         raise Warning('Failed convergence in _cgamma_continuousfraction(a,x) with a = {0}, x = {1}'.format( a, x ) )
     qax = exp( -x + a * log(x) - log_gamma ) * h
@@ -179,20 +182,19 @@ def _PoissonCumulative( mean ):
     '''
     return lambda k: cgamma(k,mean)
 
-
 def Bessel( n, p = 1e-15 ):
     '''
         1st kind nth-Bessel function with precision p.
     '''
-    
+
     besselsign = -1 if n < 0 and n % 2 else 1
-    
+
     def bessel( x ):
         dif = p + 1
         m   = 0
         new = 0.
         x  *= 0.5
-        
+
         while dif > p:
             old = new
             new += x ** ( 2*m + n ) / ( Factorial( m ) * Factorial( m + n ) )
@@ -200,41 +202,41 @@ def Bessel( n, p = 1e-15 ):
             new -= x ** ( 2*m + n ) / ( Factorial( m ) * Factorial( m + n ) )
             m += 1
             dif = abs( 1. - old/new )
-        
+
         return besselsign * new
-    
+
     return bessel
 
 def Recursive( f, x0 = 0., p = 1e-12 ):
     '''
         Calculates the root of a transcedental equation of type x = f(x) with precision p and an initial estimation x0.
     '''
-    
+
     new = 0.
     dif = p + 1
     N   = 0
-    
+
     while dif > p:
         N  += 1
         y   = f( x0 )
         dif = abs( 1. - x0/y )
         x0  = y
-        
+
         if N > 1000000:
             print 'The solution does not converge'
             return None
-    
+
     return x0
 
 def RK4( F, x0, y0, x1, dx = 1e-6 ):
-    ''' 
+    '''
         Solves a differential equation using the Runge-Kutta method. The equation must be of the form: y' = F(x,y) with the initial values x0,y0.
         The solution is a vector from x0 to x1 with the number of steps given by the precision dx.
     '''
-    
+
     y = list()
     N = int( ceil( (x1-x0)/dx ) )
-    
+
     for i in xrange(N):
         k1  = F( x0           , y0               )
         k2  = F( x0 + 0.5*dx  , y0 +   0.5*dx*k1 )
@@ -243,7 +245,7 @@ def RK4( F, x0, y0, x1, dx = 1e-6 ):
         y  += [ y0 + ( k1 +2*k2 + 2*k3 + k4 )*dx/6. ]
         x0 += dx
         y0  = y[-1]
-    
+
     return y
 
 def PolynomialInterpolator( xdata, ydata ):
@@ -272,10 +274,10 @@ def LinearInterpolator( xdata, ydata, OutOfRange = False ):
                 return ydata[0] if x0 < xdata[0] else ydata[-1]
             else:
                 raise ValueError('x0 = {0} out of range'.format(x0) )
-        
+
         slope = (y2-y1)/(x2-x1)
         const = y1 - slope * x1
-        
+
         return slope * x0 + const
 
 def SplineInterpolator( xdata, ydata, order = 3 ):
@@ -309,17 +311,17 @@ def FindRoots( F, lower, upper, ndivs = 1e5 ):
     '''
         Finds the roots of a function.
     '''
-    
+
     ndivs = int( round(ndivs) )
     div = ( lower - upper ) / (ndivs)
     f0 = F(lower)
-    
+
     roots = []
     for i in xrange( ndivs ):
         f = F( lower + i * div )
         if ( Sign(f) != Sign(f0) ):
             roots += [ lower + ( i - 0.5 ) * div ]
-        
+
         f0 = f
 
     return roots
@@ -330,25 +332,25 @@ def Root( F, lower, upper, precision = 1e-6, timeout = 1e9 ):
     '''
     lower, upper = float(lower), float(upper)
     flower, fupper = F(lower), F(upper)
-    
+
     counter = 0
     while counter < timeout:
         middle  = lower - flower * ( upper - lower ) / ( fupper - flower )
         fmiddle = F(middle)
-        
+
         if abs( fmiddle ) < precision:
             return middle
-        
+
         elif Sign( fmiddle ) == Sign( flower ):
             lower  =  middle
             flower = fmiddle
-        
+
         elif Sign( fmiddle ) == Sign( fupper ):
             upper  =  middle
             fupper = fmiddle
 
         counter += 1
-    
+
     print 'Root not found. Try to increase the timeout.'
     return None
 
@@ -356,7 +358,7 @@ def Solve2( p2, p1, p0 ):
     '''
         Solves a 2nd degree polynomial.
     '''
-    
+
     a = ( p1**2 - 4 * p2 * p0 )**.5
     return -.5 * ( p1 - a ) / p2, -.5 * ( p1 + a ) / p2
 
@@ -366,7 +368,7 @@ def Derivative( F, x, N = 1, h = 1e-4 ):
     '''
 
     a = Solve( [ [ (j - 2.)**i for j in range(5) ] + [ Factorial(N) if i == N else 0. ] for i in range(5) ] )
-    
+
     return sum( [ a[i] * f( x + (i-2) * h ) for i in range(5) ] ) / h**n
 
 def Solve( M, N = None ):
@@ -376,10 +378,10 @@ def Solve( M, N = None ):
 
     f = len( m )
     c = f + 1
-    
+
     def Pivoting( m, x ):
         ''' Pivotes on the matrix m to put the biggest element in column x in (x,x).'''
-        
+
         maxval = abs( m[x][x] )
         maxpos = x
 
@@ -398,13 +400,13 @@ def Solve( M, N = None ):
     if N:
         for i in range(f):
             m[i].append(n[i])
-    
+
     for i in range(f):
         M = Pivoting( M, i )
         for j in range( i+1, f ):
             factor = m[j][i] / m[i][i]
             m[j] = map( lambda x,y: x - factor * y, m[j], m[i] )
-    
+
     return [ ( m[i][-1] - sum( [ x[j] * m[i][j] for j in range( i+1, f ) ] ) ) / m[i][i] for i in range(f)[::-1] ]
 
 class Function:
@@ -440,10 +442,10 @@ class Polynom:
         self.coefs   = tuple(coefs)
         self.n       = len(self.coefs)
         self.degree  = self.n - 1
-    
+
     def _subpol( self ):
         '''
-            Create subpolinom: a1 + a2 x + a3 x2 + ... 
+            Create subpolinom: a1 + a2 x + a3 x2 + ...
         '''
         return self.__class__( self.coefs[1:] ) if self.degree else self.__class__([])
 
@@ -455,7 +457,7 @@ class Polynom:
         for i in range(k):
             der = der._Derivative()
         return der
-        
+
     def _Derivative( self ):
         '''
             Compute first derivative.
@@ -483,13 +485,13 @@ class Integrator:
         self.lower = lower  if not isinstance( lower, (tuple,list) ) else lower[0] if len(lower) is 1 else lower
         self.upper = upper  if not isinstance( upper, (tuple,list) ) else upper[0] if len(upper) is 1 else upper
         self.ndim  = len(lower) if isinstance( lower, (tuple,list) ) else 1
-    
+
     def Trapezoid( self, max_error = 1e-3, lower = None, upper = None ):
         N = ( ( upper - lower )**3 / max_error )**0.5
         N = int(N)
         lower = self.lower if lower is None else lower
         upper = self.upper if upper is None else upper
-    
+
     def MC( self, max_error = 1e-3, lower = None, upper = None ):
         '''
             Performs MC integration from lower to upper with an uncertainty smaller than max_error.
@@ -498,11 +500,11 @@ class Integrator:
         upper = self.upper if upper is None else upper
         lims  = [(lower,upper)] if self.ndim is 1 else zip(lower,upper)
         V = reduce( _multiplication, [ up - low for low, up in lims ] )
-        
+
         error = 1 + max_error
         f, f2, N = 0., 0., 0.
         R = RandomNumbers.MersenneTwister()
-        
+
         while error > max_error or N < 100:
             N  += 1.
             x   = [ R.Uniform(low,up) for low,up in lims ]
@@ -510,7 +512,7 @@ class Integrator:
             f  += fx
             f2 += fx**2
             error = V * sqrt( abs( f2 / N**2 - f**2 / N**3 ) )
-        
+
         return V * f / N, error
 
     def Riemann( self, Ndivisions = 1e4, lower = None, upper = None ):
@@ -530,7 +532,7 @@ class Integrator:
             for i in xrange(int(Ndivisions)):
                 newfun = lambda *args: self.fun( *( (lower[0] + (i+.5)*delta,) + args) )
                 fx += Integrator( newfun, lower[1:], upper[1:] ).Riemann(Ndivisions)
-            
+
         return fx * delta
 
 class Fitter:
@@ -559,7 +561,7 @@ class Fitter:
         a = [ [1.] * self.N ] + [ map( lambda x: pow( x, n+1 ), self.x) for n in range(degree) ]
         a = Array.Matrix(*a)
         b = Array.Vector(*self.y)
-        
+
         self.A = a ** a.T()
         self.B = a ** b
         self.AI = self.A.Inverse()
@@ -567,7 +569,7 @@ class Fitter:
         f = lambda x: sum( [self.coefs[i]*pow(x,i) for i in range(degree+1)] )
         chi2 = sum( [ pow( y - f(x), 2 ) for x,y in zip(self.x,self.y) ] )
         syx = sqrt( chi2 / ( self.N - degree - 1 ) )
-        
+
         self.coefs_errors = [ syx * sqrt( self.AI[i][i] ) for i in range(degree+1) ]
         return zip( self.coefs, self.coefs_errors )
 
@@ -584,7 +586,7 @@ class Optimizer:
         self.xmin = tuple(xmin) if isinstance( xmin, (list,tuple) ) else xmin
         self.xmax = tuple(xmax) if isinstance( xmax, (list,tuple) ) else xmax
         self.gold = ( 3 - sqrt(5) ) / 2 #golden ratio to perform better
-    
+
     def Minimize( self, x0 = None, max_size = 1e-6, xmin = None, xmax = None ):
         return self._Minimize1D( x0, max_size, xmin, xmax ) if self.ndim is 1 else self._MinimizeND( x0, None, max_size, xmin, xmax )
 
@@ -600,7 +602,7 @@ class Optimizer:
         a = self.xmin if xmin is None else xmin
         c = self.xmax if xmax is None else xmax
         b = self._FirstMiddlePoint( a, c ) if x0 is None else x0
-        
+
         while (c-a) > max_size:
             fb  = self.fun( b )
             new, closetoa = self._MiddlePoint( a, b, c )
@@ -609,7 +611,7 @@ class Optimizer:
                 a, b, c = (a, new, b) if closetoa else (b, new, c)
             else:
                 a, b, c = (new, b, c) if closetoa else (a, b, new)
-                
+
         return (new,new-a,b-new), fnew
 
     def _MinimizeND( self, x0 = None, v0 = None, max_size = 1e-6, xmin = (), xmax = (), max_iter = 1e5 ):
@@ -619,16 +621,16 @@ class Optimizer:
         x0  = Array.Vector(x0)
         v0  = Array.Identity(self.ndim) if v0 is None else Array.Matrix(v0)
         fx0 = self.fun( x0 )
-        
+
         x   = Array.Vector(x0)
         v   = v0
         fx  = fx0
-        
+
         niterations = -1
         while True:
             niterations += 1
             print 'iteration number {0}'.format(niterations)
-            
+
             fx1    = fx
             bigdim = 0
             bigval = 0.
@@ -638,19 +640,19 @@ class Optimizer:
                 if fx2 - fx > bigval:
                     bigval = fx2 - fx
                     bigdim = i
-        
+
             if 2 * ( fx1 - fx ) <= max_size * ( abs(fx1) + abs(fx) + 1e-6 ):
                 return x, fx
-            
+
             if niterations > max_iter:
                 raise Warning('Minimum not found after {0} iterations. Try to increment the max_iter argument if you think it must exist a minimum.'.format(niterations))
                 return None
-            
+
             x1 = 2 * x - x0
             v1 = x - x0
             x0 = x
             fx2 = self.fun( x1 )
-            
+
             if fx2 < fx1 and 2 * ( fx1 - 2 * fx + fx2 ) * sqrt( fx1 - fx - bigval ) - bigval * sqrt( fx1 - fx2 ):
                 x, v1, fx =  self._MinimizeAlongPath( x, v1, max_size )
                 v[bigdim] = Array.Vector( v[self.ndim] )
@@ -662,7 +664,7 @@ class Optimizer:
         Vnew = xmin[0] * V
         Pnew = P + Vnew
         return Pnew, Vnew, fxmin
-    
+
 
     def _Maximize1D( self, x0 = None, max_size = 1e-6, xmin = None, xmax = None ):
         '''
@@ -740,7 +742,7 @@ if __name__ == '__main__':
 #    xfull = [ 0.1*i for i in range(10,1000)]
 #    yfull = map( interpolator, xfull )
 #    yreal = map( fun, xfull )
-#    
+#
 #    data = TGraph(); data.SetMarkerStyle(20)
 #    curve = TGraph();curve.SetLineColor(2);curve.SetLineWidth(2)
 #    real = TGraph();real.SetLineColor(4);real.SetLineWidth(2)
