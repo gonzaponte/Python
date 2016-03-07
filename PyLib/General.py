@@ -77,7 +77,8 @@ def TimeIt( f ):
     def timmed(*args,**kwargs):
         t0 = time.time()
         output = f(*args,**kwargs)
-        print 'Time spent in {0}: {1}'.format( f.__name__, time.time() - t0 )
+        dt = time.time() - t0
+        print 'Time spent in {0}: {1}'.format( f.__name__, dt )
         return output
     return timmed
 
