@@ -23,7 +23,7 @@ print 'Password:', password
 print 'New URL (with user and password):'
 print 'http://www.pythonchallenge.com/pc/return/good.html'
 
-
+'''
 
 url2 = 'http://www.pythonchallenge.com/pc/return/good.html'
 passman = urllib2.HTTPPasswordMgrWithDefaultRealm()
@@ -33,3 +33,4 @@ req = urllib2.Request(url2)
 f = urllib2.urlopen(req)
 data = f.read()
 print(data)
+'''
