@@ -16,6 +16,7 @@ import Plots
 import random
 import Array
 from ROOT import TCanvas,TH1F
+from operator import itemgetter
 
 def Moment( order, data, weights = None, mean = None ):
     '''
@@ -183,14 +184,14 @@ def Median( data ):
             f0 = cum[ i - 1 ]
             a1 = x  [ i     ]
             a0 = x  [ i - 1 ]
-            return a0 + ( half - f0 ) / ( f1 - f0 ) * ( a1 - a0 )
+            return a0 + ( half - f0 ) / ( f1 - f0 ) * ( a1 - a0 ) if f1-f0 else a0
 
 def Mode( data ):
     '''
         Returns the mode of a sample. The argument must be a list/tuple with data or a dictionary with pairs value - frecuency.
     '''
     if isinstance( data, dict ):
-        return max( *Sequences.Izip( sorted(data.items()) ) )[1]
+        return sorted( data.items(), key=itemgetter(1), reverse=True )[0][0]
     else:
         return Mode( Sequences.Frequencies( data ) )
 
